@@ -11,40 +11,14 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <title>Color Your Mind</title>
   <link rel="manifest" href="manifest.json">
-  <script>
-    var serviceWorkerVersion = null;
-    var scriptLoaded = false;
-    function loadMainDartJs() {
-      if (scriptLoaded) {
-        return;
-      }
-      scriptLoaded = true;
-      var scriptTag = document.createElement('script');
-      scriptTag.src = 'flutter.js';
-      scriptTag.type = 'application/javascript';
-      document.body.append(scriptTag);
-
-      scriptTag.onload = async function() {
-        if (serviceWorkerVersion != null) {
-          var loader = await _flutter.loader;
-          loader.loadEntrypoint({
-            serviceWorker: {
-              serviceWorkerVersion: serviceWorkerVersion,
-            }
-          });
-        } else {
-          _flutter.loader.loadEntrypoint();
-        }
-      }
-    }
-  </script>
 </head>
 <body>
   <script>
     window.addEventListener('load', function(ev) {
+      // Download main.dart.js
       _flutter.loader.loadEntrypoint({
         serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
+          serviceWorkerVersion: null,
         },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
