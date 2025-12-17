@@ -4,13 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:coloryourmind_flutter/main.dart';
 
 void main() {
-  testWidgets('App should display welcome message', (WidgetTester tester) async {
+  testWidgets('App should display intro page with title', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const ColorYourMindApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our welcome message is displayed.
-    expect(find.text('Welcome to Color Your Mind!'), findsOneWidget);
-    expect(find.text('A coloring book app for mobile and web'), findsOneWidget);
+    // Verify that the intro page elements are displayed.
+    expect(find.text('Color Your Mind'), findsOneWidget);
+    expect(find.text('Unleash Your Creativity'), findsOneWidget);
+    expect(find.text('Start Coloring'), findsOneWidget);
     expect(find.byIcon(Icons.palette), findsOneWidget);
   });
 }
