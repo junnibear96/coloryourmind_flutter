@@ -64,10 +64,14 @@ final List<ColoringImage> coloringImages = [
     icon: Icons.favorite,
     thumbnailColor: Colors.pink.shade200,
     shapes: [
-      ShapeData(type: ShapeType.heart, position: const Offset(200, 150), size: 80),
-      ShapeData(type: ShapeType.heart, position: const Offset(350, 200), size: 60),
-      ShapeData(type: ShapeType.heart, position: const Offset(150, 280), size: 50),
-      ShapeData(type: ShapeType.heart, position: const Offset(320, 320), size: 70),
+      ShapeData(
+          type: ShapeType.heart, position: const Offset(200, 150), size: 80),
+      ShapeData(
+          type: ShapeType.heart, position: const Offset(350, 200), size: 60),
+      ShapeData(
+          type: ShapeType.heart, position: const Offset(150, 280), size: 50),
+      ShapeData(
+          type: ShapeType.heart, position: const Offset(320, 320), size: 70),
     ],
   ),
   ColoringImage(
@@ -75,10 +79,14 @@ final List<ColoringImage> coloringImages = [
     icon: Icons.star,
     thumbnailColor: Colors.yellow.shade200,
     shapes: [
-      ShapeData(type: ShapeType.star, position: const Offset(250, 150), size: 70),
-      ShapeData(type: ShapeType.star, position: const Offset(150, 250), size: 60),
-      ShapeData(type: ShapeType.star, position: const Offset(350, 280), size: 55),
-      ShapeData(type: ShapeType.star, position: const Offset(250, 350), size: 65),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(250, 150), size: 70),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(150, 250), size: 60),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(350, 280), size: 55),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(250, 350), size: 65),
     ],
   ),
   ColoringImage(
@@ -86,9 +94,12 @@ final List<ColoringImage> coloringImages = [
     icon: Icons.local_florist,
     thumbnailColor: Colors.purple.shade200,
     shapes: [
-      ShapeData(type: ShapeType.flower, position: const Offset(200, 200), size: 80),
-      ShapeData(type: ShapeType.flower, position: const Offset(350, 220), size: 70),
-      ShapeData(type: ShapeType.flower, position: const Offset(250, 330), size: 75),
+      ShapeData(
+          type: ShapeType.flower, position: const Offset(200, 200), size: 80),
+      ShapeData(
+          type: ShapeType.flower, position: const Offset(350, 220), size: 70),
+      ShapeData(
+          type: ShapeType.flower, position: const Offset(250, 330), size: 75),
     ],
   ),
   ColoringImage(
@@ -96,9 +107,18 @@ final List<ColoringImage> coloringImages = [
     icon: Icons.flutter_dash,
     thumbnailColor: Colors.orange.shade200,
     shapes: [
-      ShapeData(type: ShapeType.butterfly, position: const Offset(180, 180), size: 90),
-      ShapeData(type: ShapeType.butterfly, position: const Offset(340, 240), size: 80),
-      ShapeData(type: ShapeType.butterfly, position: const Offset(240, 340), size: 85),
+      ShapeData(
+          type: ShapeType.butterfly,
+          position: const Offset(180, 180),
+          size: 90),
+      ShapeData(
+          type: ShapeType.butterfly,
+          position: const Offset(340, 240),
+          size: 80),
+      ShapeData(
+          type: ShapeType.butterfly,
+          position: const Offset(240, 340),
+          size: 85),
     ],
   ),
   ColoringImage(
@@ -106,9 +126,12 @@ final List<ColoringImage> coloringImages = [
     icon: Icons.wb_sunny,
     thumbnailColor: Colors.amber.shade200,
     shapes: [
-      ShapeData(type: ShapeType.sun, position: const Offset(250, 200), size: 100),
-      ShapeData(type: ShapeType.star, position: const Offset(150, 320), size: 50),
-      ShapeData(type: ShapeType.star, position: const Offset(360, 340), size: 45),
+      ShapeData(
+          type: ShapeType.sun, position: const Offset(250, 200), size: 100),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(150, 320), size: 50),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(360, 340), size: 45),
     ],
   ),
   ColoringImage(
@@ -116,10 +139,14 @@ final List<ColoringImage> coloringImages = [
     icon: Icons.nightlight,
     thumbnailColor: Colors.indigo.shade200,
     shapes: [
-      ShapeData(type: ShapeType.moon, position: const Offset(230, 180), size: 90),
-      ShapeData(type: ShapeType.star, position: const Offset(160, 280), size: 40),
-      ShapeData(type: ShapeType.star, position: const Offset(340, 260), size: 45),
-      ShapeData(type: ShapeType.star, position: const Offset(280, 350), size: 35),
+      ShapeData(
+          type: ShapeType.moon, position: const Offset(230, 180), size: 90),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(160, 280), size: 40),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(340, 260), size: 45),
+      ShapeData(
+          type: ShapeType.star, position: const Offset(280, 350), size: 35),
     ],
   ),
 ];
@@ -169,7 +196,8 @@ class _IntroPageState extends State<IntroPage> {
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
               title: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(20),
@@ -313,7 +341,8 @@ class _IntroPageState extends State<IntroPage> {
                     },
                     decoration: InputDecoration(
                       hintText: 'Search designs...',
-                      prefixIcon: Icon(Icons.search, color: Colors.purple.shade400),
+                      prefixIcon:
+                          Icon(Icons.search, color: Colors.purple.shade400),
                       suffixIcon: searchQuery.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
@@ -337,7 +366,8 @@ class _IntroPageState extends State<IntroPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide(color: Colors.purple.shade400, width: 2),
+                        borderSide:
+                            BorderSide(color: Colors.purple.shade400, width: 2),
                       ),
                     ),
                   ),
@@ -396,7 +426,8 @@ class _IntroPageState extends State<IntroPage> {
               : SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 300,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
@@ -528,7 +559,8 @@ class ThumbnailPainter extends CustomPainter {
       );
       final scaledSize = shape.size * ((scaleX + scaleY) / 2);
 
-      _drawShape(canvas, shape.type, scaledPosition, scaledSize, paint, strokePaint);
+      _drawShape(
+          canvas, shape.type, scaledPosition, scaledSize, paint, strokePaint);
     }
   }
 
@@ -556,24 +588,32 @@ class ThumbnailPainter extends CustomPainter {
     }
   }
 
-  void _drawHeart(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawHeart(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     final path = Path();
     path.moveTo(center.dx, center.dy + size * 0.3);
     path.cubicTo(
-      center.dx - size * 0.6, center.dy - size * 0.1,
-      center.dx - size * 0.6, center.dy - size * 0.6,
-      center.dx, center.dy - size * 0.3,
+      center.dx - size * 0.6,
+      center.dy - size * 0.1,
+      center.dx - size * 0.6,
+      center.dy - size * 0.6,
+      center.dx,
+      center.dy - size * 0.3,
     );
     path.cubicTo(
-      center.dx + size * 0.6, center.dy - size * 0.6,
-      center.dx + size * 0.6, center.dy - size * 0.1,
-      center.dx, center.dy + size * 0.3,
+      center.dx + size * 0.6,
+      center.dy - size * 0.6,
+      center.dx + size * 0.6,
+      center.dy - size * 0.1,
+      center.dx,
+      center.dy + size * 0.3,
     );
     canvas.drawPath(path, fill);
     canvas.drawPath(path, stroke);
   }
 
-  void _drawStar(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawStar(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     final path = Path();
     for (int i = 0; i < 10; i++) {
       final radius = i.isEven ? size : size * 0.4;
@@ -591,7 +631,8 @@ class ThumbnailPainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawFlower(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawFlower(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     for (int i = 0; i < 6; i++) {
       final angle = i * 60 * math.pi / 180;
       final petalCenter = Offset(
@@ -605,7 +646,8 @@ class ThumbnailPainter extends CustomPainter {
     canvas.drawCircle(center, size * 0.2, stroke);
   }
 
-  void _drawButterfly(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawButterfly(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     canvas.drawOval(
       Rect.fromCenter(
           center: Offset(center.dx - size * 0.3, center.dy - size * 0.15),
@@ -666,10 +708,12 @@ class ThumbnailPainter extends CustomPainter {
       ..color = Colors.grey.shade600
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-    canvas.drawLine(center, Offset(center.dx, center.dy + size * 0.4), bodyPaint);
+    canvas.drawLine(
+        center, Offset(center.dx, center.dy + size * 0.4), bodyPaint);
   }
 
-  void _drawSun(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawSun(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     canvas.drawCircle(center, size * 0.3, fill);
     canvas.drawCircle(center, size * 0.3, stroke);
     for (int i = 0; i < 12; i++) {
@@ -690,7 +734,8 @@ class ThumbnailPainter extends CustomPainter {
     }
   }
 
-  void _drawMoon(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawMoon(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     canvas.drawCircle(center, size * 0.4, fill);
     canvas.drawCircle(center, size * 0.4, stroke);
   }
@@ -730,6 +775,13 @@ enum CanvasObjectType {
   text,
 }
 
+class _CanvasViewTransform {
+  final double scale;
+  final Offset offset;
+
+  const _CanvasViewTransform({required this.scale, required this.offset});
+}
+
 // Coloring Page
 class ColoringPage extends StatefulWidget {
   final ColoringImage coloringImage;
@@ -741,6 +793,8 @@ class ColoringPage extends StatefulWidget {
 }
 
 class _ColoringPageState extends State<ColoringPage> {
+  static const double _baseCanvasSize = 500.0;
+
   Color selectedColor = Colors.red;
   final Map<int, Color> shapeColors = {};
   final List<DrawnLine> lines = [];
@@ -753,6 +807,9 @@ class _ColoringPageState extends State<ColoringPage> {
   final List<CanvasObject> canvasObjects = [];
   String? selectedObjectId;
   final TextEditingController textController = TextEditingController();
+
+  String _canvasAspectKey = '1:1';
+  double _canvasAspectRatio = 1.0;
 
   final List<Color> colorPalette = [
     Colors.red,
@@ -813,6 +870,28 @@ class _ColoringPageState extends State<ColoringPage> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  _CanvasViewTransform _computeViewTransform(Size viewSize) {
+    final scale = math.min(
+        viewSize.width / _baseCanvasSize, viewSize.height / _baseCanvasSize);
+    final offset = Offset(
+      (viewSize.width - (_baseCanvasSize * scale)) / 2,
+      (viewSize.height - (_baseCanvasSize * scale)) / 2,
+    );
+    return _CanvasViewTransform(scale: scale, offset: offset);
+  }
+
+  Offset? _toCanvasSpace(Offset localPosition, _CanvasViewTransform t) {
+    final p = Offset(
+      (localPosition.dx - t.offset.dx) / t.scale,
+      (localPosition.dy - t.offset.dy) / t.scale,
+    );
+    if (p.dx < 0 ||
+        p.dy < 0 ||
+        p.dx > _baseCanvasSize ||
+        p.dy > _baseCanvasSize) return null;
+    return p;
   }
 
   @override
@@ -962,7 +1041,8 @@ class _ColoringPageState extends State<ColoringPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (currentTool == DrawingTool.brush || currentTool == DrawingTool.eraser)
+                    if (currentTool == DrawingTool.brush ||
+                        currentTool == DrawingTool.eraser)
                       Row(
                         children: [
                           const Text('Size: ', style: TextStyle(fontSize: 14)),
@@ -1005,7 +1085,9 @@ class _ColoringPageState extends State<ColoringPage> {
                           color: color,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: selectedColor == color ? Colors.black : Colors.grey.shade400,
+                            color: selectedColor == color
+                                ? Colors.black
+                                : Colors.grey.shade400,
                             width: selectedColor == color ? 3 : 2,
                           ),
                           boxShadow: [
@@ -1044,7 +1126,8 @@ class _ColoringPageState extends State<ColoringPage> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => setState(() => showShapeLibrary = false),
+                        onPressed: () =>
+                            setState(() => showShapeLibrary = false),
                         iconSize: 20,
                       ),
                     ],
@@ -1060,7 +1143,8 @@ class _ColoringPageState extends State<ColoringPage> {
                             canvasObjects.add(
                               CanvasObject(
                                 id: DateTime.now().toString(),
-                                position: const Offset(200, 200),
+                                position: const Offset(
+                                    _baseCanvasSize / 2, _baseCanvasSize / 2),
                                 type: CanvasObjectType.sticker,
                                 data: icon,
                               ),
@@ -1096,7 +1180,8 @@ class _ColoringPageState extends State<ColoringPage> {
                       decoration: const InputDecoration(
                         hintText: 'Enter text...',
                         border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                     ),
                   ),
@@ -1108,7 +1193,8 @@ class _ColoringPageState extends State<ColoringPage> {
                           canvasObjects.add(
                             CanvasObject(
                               id: DateTime.now().toString(),
-                              position: const Offset(150, 150),
+                              position: const Offset(
+                                  _baseCanvasSize / 2, _baseCanvasSize / 2),
                               type: CanvasObjectType.text,
                               data: {
                                 'text': textController.text,
@@ -1138,226 +1224,444 @@ class _ColoringPageState extends State<ColoringPage> {
           Expanded(
             child: Container(
               color: Colors.white,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (details) {
-                  // Only allow drawing/filling when no sticker is selected
-                  if (selectedObjectId == null) {
-                    if (currentTool == DrawingTool.fill) {
-                      _handleTap(details.localPosition);
-                    }
-                  } else {
-                    // Deselect sticker when clicking outside
-                    setState(() {
-                      selectedObjectId = null;
-                    });
-                  }
-                },
-                onPanStart: (details) {
-                  // Only allow drawing when no sticker is selected
-                  if (selectedObjectId == null && (currentTool == DrawingTool.brush || currentTool == DrawingTool.eraser)) {
-                    setState(() {
-                      history.clear();
-                      currentLine = DrawnLine(
-                        points: [details.localPosition],
-                        color: currentTool == DrawingTool.eraser ? Colors.white : selectedColor,
-                        width: currentTool == DrawingTool.eraser ? strokeWidth * 2 : strokeWidth,
-                      );
-                    });
-                  }
-                },
-                onPanUpdate: (details) {
-                  // Only allow drawing when no sticker is selected
-                  if (selectedObjectId == null && (currentTool == DrawingTool.brush || currentTool == DrawingTool.eraser)) {
-                    setState(() {
-                      currentLine = DrawnLine(
-                        points: List.from(currentLine?.points ?? [])..add(details.localPosition),
-                        color: currentTool == DrawingTool.eraser ? Colors.white : selectedColor,
-                        width: currentTool == DrawingTool.eraser ? strokeWidth * 2 : strokeWidth,
-                      );
-                    });
-                  }
-                },
-                onPanEnd: (details) {
-                  // Only allow drawing when no sticker is selected
-                  if (selectedObjectId == null && (currentTool == DrawingTool.brush || currentTool == DrawingTool.eraser)) {
-                    setState(() {
-                      if (currentLine != null) {
-                        lines.add(currentLine!);
-                      }
-                      currentLine = null;
-                    });
-                  }
-                },
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      painter: ColoringCanvasPainter(
-                        shapes: widget.coloringImage.shapes,
-                        shapeColors: shapeColors,
-                        lines: lines,
-                        currentLine: currentLine,
-                      ),
-                      size: Size.infinite,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Canvas ratio:',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 8),
+                        DropdownButton<String>(
+                          value: _canvasAspectKey,
+                          items: const [
+                            DropdownMenuItem(value: '1:1', child: Text('1:1')),
+                            DropdownMenuItem(value: '4:3', child: Text('4:3')),
+                            DropdownMenuItem(value: '3:4', child: Text('3:4')),
+                            DropdownMenuItem(
+                                value: '16:9', child: Text('16:9')),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _canvasAspectKey = value;
+                              switch (value) {
+                                case '1:1':
+                                  _canvasAspectRatio = 1.0;
+                                  break;
+                                case '4:3':
+                                  _canvasAspectRatio = 4 / 3;
+                                  break;
+                                case '3:4':
+                                  _canvasAspectRatio = 3 / 4;
+                                  break;
+                                case '16:9':
+                                  _canvasAspectRatio = 16 / 9;
+                                  break;
+                              }
+                            });
+                          },
+                        ),
+                      ],
                     ),
-                    // Canvas Objects (Stickers and Text)
-                    ...canvasObjects.map((obj) {
-                      final isSelected = selectedObjectId == obj.id;
-                      final objectSize = obj.size;
-                      
-                      return Positioned(
-                        left: obj.position.dx - objectSize / 2,
-                        top: obj.position.dy - objectSize / 2,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            // Main Container
-                            IgnorePointer(
-                              ignoring: currentTool == DrawingTool.brush || currentTool == DrawingTool.eraser || currentTool == DrawingTool.fill,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  setState(() {
-                                    selectedObjectId = isSelected ? null : obj.id;
-                                  });
-                                },
-                                onPanStart: (details) {
-                                  setState(() {
-                                    selectedObjectId = obj.id;
-                                  });
-                                },
-                                onPanUpdate: (details) {
-                                  setState(() {
-                                    obj.position = Offset(
-                                      obj.position.dx + details.delta.dx,
-                                      obj.position.dy + details.delta.dy,
-                                    );
-                                  });
-                                },
-                                child: Container(
-                                  width: objectSize + 16,
-                                  height: objectSize + 16,
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? Colors.white.withOpacity(0.9) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: isSelected ? Border.all(
-                                      color: Colors.purple.shade400,
-                                      width: 3,
-                                    ) : null,
-                                    boxShadow: isSelected ? [
-                                      BoxShadow(
-                                        color: Colors.purple.withOpacity(0.3),
-                                        blurRadius: 8,
-                                        spreadRadius: 2,
-                                      ),
-                                    ] : null,
-                                  ),
-                                  child: Center(
-                                    child: obj.type == CanvasObjectType.sticker
-                                        ? Icon(obj.data as IconData, size: objectSize, color: selectedColor)
-                                        : Text(
-                                            obj.data['text'] as String,
-                                            style: TextStyle(
-                                              fontSize: objectSize / 2,
-                                              fontWeight: FontWeight.bold,
-                                              color: obj.data['color'] as Color,
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final maxWidth = math.min(
+                            520.0, math.max(0.0, constraints.maxWidth - 24));
+                        final maxHeight = math.min(
+                            520.0, math.max(0.0, constraints.maxHeight - 24));
+
+                        return Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                                maxWidth: maxWidth, maxHeight: maxHeight),
+                            child: AspectRatio(
+                              aspectRatio: _canvasAspectRatio,
+                              child: LayoutBuilder(
+                                builder: (context, innerConstraints) {
+                                  final viewSize = Size(
+                                      innerConstraints.maxWidth,
+                                      innerConstraints.maxHeight);
+                                  final t = _computeViewTransform(viewSize);
+
+                                  return ClipRect(
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTapDown: (details) {
+                                        if (selectedObjectId == null) {
+                                          if (currentTool == DrawingTool.fill) {
+                                            final p = _toCanvasSpace(
+                                                details.localPosition, t);
+                                            if (p != null) {
+                                              _handleTap(p);
+                                            }
+                                          }
+                                        } else {
+                                          setState(() {
+                                            selectedObjectId = null;
+                                          });
+                                        }
+                                      },
+                                      onPanStart: (details) {
+                                        if (selectedObjectId != null) return;
+                                        if (currentTool != DrawingTool.brush &&
+                                            currentTool != DrawingTool.eraser)
+                                          return;
+
+                                        final p = _toCanvasSpace(
+                                            details.localPosition, t);
+                                        if (p == null) return;
+
+                                        setState(() {
+                                          history.clear();
+                                          currentLine = DrawnLine(
+                                            points: [p],
+                                            color: currentTool ==
+                                                    DrawingTool.eraser
+                                                ? Colors.white
+                                                : selectedColor,
+                                            width: (currentTool ==
+                                                        DrawingTool.eraser
+                                                    ? strokeWidth * 2
+                                                    : strokeWidth) /
+                                                t.scale,
+                                          );
+                                        });
+                                      },
+                                      onPanUpdate: (details) {
+                                        if (selectedObjectId != null) return;
+                                        if (currentTool != DrawingTool.brush &&
+                                            currentTool != DrawingTool.eraser)
+                                          return;
+
+                                        final p = _toCanvasSpace(
+                                            details.localPosition, t);
+                                        if (p == null) return;
+
+                                        setState(() {
+                                          currentLine = DrawnLine(
+                                            points: List<Offset>.from(
+                                                currentLine?.points ??
+                                                    const <Offset>[])
+                                              ..add(p),
+                                            color: currentTool ==
+                                                    DrawingTool.eraser
+                                                ? Colors.white
+                                                : selectedColor,
+                                            width: (currentTool ==
+                                                        DrawingTool.eraser
+                                                    ? strokeWidth * 2
+                                                    : strokeWidth) /
+                                                t.scale,
+                                          );
+                                        });
+                                      },
+                                      onPanEnd: (details) {
+                                        if (selectedObjectId != null) return;
+                                        if (currentTool != DrawingTool.brush &&
+                                            currentTool != DrawingTool.eraser)
+                                          return;
+
+                                        setState(() {
+                                          if (currentLine != null) {
+                                            lines.add(currentLine!);
+                                          }
+                                          currentLine = null;
+                                        });
+                                      },
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: CustomPaint(
+                                              painter: ColoringCanvasPainter(
+                                                shapes:
+                                                    widget.coloringImage.shapes,
+                                                shapeColors: shapeColors,
+                                                lines: lines,
+                                                currentLine: currentLine,
+                                                baseCanvasSize: _baseCanvasSize,
+                                              ),
                                             ),
                                           ),
-                                  ),
-                                ),
+                                          ...canvasObjects.map((obj) {
+                                            final isSelected =
+                                                selectedObjectId == obj.id;
+                                            final viewCenter = t.offset +
+                                                (obj.position * t.scale);
+                                            final objectSizeView =
+                                                obj.size * t.scale;
+
+                                            return Positioned(
+                                              left: viewCenter.dx -
+                                                  objectSizeView / 2,
+                                              top: viewCenter.dy -
+                                                  objectSizeView / 2,
+                                              child: Stack(
+                                                clipBehavior: Clip.none,
+                                                children: [
+                                                  IgnorePointer(
+                                                    ignoring: currentTool ==
+                                                            DrawingTool.brush ||
+                                                        currentTool ==
+                                                            DrawingTool
+                                                                .eraser ||
+                                                        currentTool ==
+                                                            DrawingTool.fill,
+                                                    child: GestureDetector(
+                                                      behavior: HitTestBehavior
+                                                          .opaque,
+                                                      onTap: () {
+                                                        setState(() {
+                                                          selectedObjectId =
+                                                              isSelected
+                                                                  ? null
+                                                                  : obj.id;
+                                                        });
+                                                      },
+                                                      onPanStart: (details) {
+                                                        setState(() {
+                                                          selectedObjectId =
+                                                              obj.id;
+                                                        });
+                                                      },
+                                                      onPanUpdate: (details) {
+                                                        setState(() {
+                                                          obj.position +=
+                                                              details.delta /
+                                                                  t.scale;
+                                                          obj.position = Offset(
+                                                            obj.position.dx
+                                                                .clamp(0.0,
+                                                                    _baseCanvasSize)
+                                                                .toDouble(),
+                                                            obj.position.dy
+                                                                .clamp(0.0,
+                                                                    _baseCanvasSize)
+                                                                .toDouble(),
+                                                          );
+                                                        });
+                                                      },
+                                                      child: Container(
+                                                        width:
+                                                            objectSizeView + 16,
+                                                        height:
+                                                            objectSizeView + 16,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(8),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: isSelected
+                                                              ? Colors.white
+                                                                  .withOpacity(
+                                                                      0.9)
+                                                              : Colors
+                                                                  .transparent,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(8),
+                                                          border: isSelected
+                                                              ? Border.all(
+                                                                  color: Colors
+                                                                      .purple
+                                                                      .shade400,
+                                                                  width: 3,
+                                                                )
+                                                              : null,
+                                                          boxShadow: isSelected
+                                                              ? [
+                                                                  BoxShadow(
+                                                                    color: Colors
+                                                                        .purple
+                                                                        .withOpacity(
+                                                                            0.3),
+                                                                    blurRadius:
+                                                                        8,
+                                                                    spreadRadius:
+                                                                        2,
+                                                                  ),
+                                                                ]
+                                                              : null,
+                                                        ),
+                                                        child: Center(
+                                                          child: obj.type ==
+                                                                  CanvasObjectType
+                                                                      .sticker
+                                                              ? Icon(
+                                                                  obj.data
+                                                                      as IconData,
+                                                                  size:
+                                                                      objectSizeView,
+                                                                  color:
+                                                                      selectedColor)
+                                                              : Text(
+                                                                  obj.data[
+                                                                          'text']
+                                                                      as String,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        objectSizeView /
+                                                                            2,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: obj.data[
+                                                                            'color']
+                                                                        as Color,
+                                                                  ),
+                                                                ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (isSelected)
+                                                    Positioned(
+                                                      right: -12,
+                                                      top: -12,
+                                                      child: IgnorePointer(
+                                                        ignoring: false,
+                                                        child: MouseRegion(
+                                                          cursor:
+                                                              SystemMouseCursors
+                                                                  .click,
+                                                          child: Listener(
+                                                            onPointerDown:
+                                                                (event) {
+                                                              setState(() {
+                                                                canvasObjects
+                                                                    .remove(
+                                                                        obj);
+                                                                selectedObjectId =
+                                                                    null;
+                                                              });
+                                                            },
+                                                            child: Container(
+                                                              width: 32,
+                                                              height: 32,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: Colors
+                                                                    .red
+                                                                    .shade500,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                                border: Border.all(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    width: 3),
+                                                                boxShadow: [
+                                                                  BoxShadow(
+                                                                    color: Colors
+                                                                        .black
+                                                                        .withOpacity(
+                                                                            0.3),
+                                                                    blurRadius:
+                                                                        4,
+                                                                    offset:
+                                                                        const Offset(
+                                                                            0,
+                                                                            2),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              child: const Icon(
+                                                                Icons.close,
+                                                                size: 18,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (isSelected)
+                                                    Positioned(
+                                                      right: -12,
+                                                      bottom: -12,
+                                                      child: IgnorePointer(
+                                                        ignoring: false,
+                                                        child: MouseRegion(
+                                                          cursor:
+                                                              SystemMouseCursors
+                                                                  .resizeDownRight,
+                                                          child: Listener(
+                                                            onPointerMove:
+                                                                (event) {
+                                                              setState(() {
+                                                                obj.size = (obj
+                                                                            .size +
+                                                                        (event.delta.dx + event.delta.dy) /
+                                                                            t
+                                                                                .scale)
+                                                                    .clamp(20.0,
+                                                                        120.0);
+                                                              });
+                                                            },
+                                                            child: Container(
+                                                              width: 32,
+                                                              height: 32,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: Colors
+                                                                    .purple
+                                                                    .shade500,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                                border: Border.all(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    width: 3),
+                                                                boxShadow: [
+                                                                  BoxShadow(
+                                                                    color: Colors
+                                                                        .black
+                                                                        .withOpacity(
+                                                                            0.3),
+                                                                    blurRadius:
+                                                                        4,
+                                                                    offset:
+                                                                        const Offset(
+                                                                            0,
+                                                                            2),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              child: const Icon(
+                                                                Icons
+                                                                    .open_in_full,
+                                                                size: 16,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                            // Delete Button (Top Right)
-                            if (isSelected)
-                              Positioned(
-                                right: -12,
-                                top: -12,
-                                child: IgnorePointer(
-                                  ignoring: false,
-                                  child: MouseRegion(
-                                    cursor: SystemMouseCursors.click,
-                                    child: Listener(
-                                      onPointerDown: (event) {
-                                        setState(() {
-                                          canvasObjects.remove(obj);
-                                          selectedObjectId = null;
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade500,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 3),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.3),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          size: 18,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            // Resize Handle (Bottom Right)
-                            if (isSelected)
-                              Positioned(
-                                right: -12,
-                                bottom: -12,
-                                child: IgnorePointer(
-                                  ignoring: false,
-                                  child: MouseRegion(
-                                    cursor: SystemMouseCursors.resizeDownRight,
-                                    child: Listener(
-                                      onPointerDown: (event) {
-                                        // Start resizing
-                                      },
-                                      onPointerMove: (event) {
-                                        setState(() {
-                                          obj.size = (obj.size + event.delta.dx + event.delta.dy).clamp(20.0, 120.0);
-                                        });
-                                      },
-                                      child: Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: Colors.purple.shade500,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 3),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.3),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.open_in_full,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1417,16 +1721,29 @@ class ColoringCanvasPainter extends CustomPainter {
   final Map<int, Color> shapeColors;
   final List<DrawnLine> lines;
   final DrawnLine? currentLine;
+  final double baseCanvasSize;
 
   ColoringCanvasPainter({
     required this.shapes,
     required this.shapeColors,
     required this.lines,
     this.currentLine,
+    required this.baseCanvasSize,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final scale =
+        math.min(size.width / baseCanvasSize, size.height / baseCanvasSize);
+    final offset = Offset(
+      (size.width - (baseCanvasSize * scale)) / 2,
+      (size.height - (baseCanvasSize * scale)) / 2,
+    );
+
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    canvas.scale(scale);
+
     for (int i = 0; i < shapes.length; i++) {
       final shape = shapes[i];
       final fillColor = shapeColors[i] ?? Colors.white;
@@ -1438,7 +1755,7 @@ class ColoringCanvasPainter extends CustomPainter {
       final strokePaint = Paint()
         ..color = Colors.black
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
+        ..strokeWidth = 3 / scale;
 
       _drawShape(canvas, shape, fillPaint, strokePaint);
     }
@@ -1450,9 +1767,12 @@ class ColoringCanvasPainter extends CustomPainter {
     if (currentLine != null) {
       _drawLine(canvas, currentLine!);
     }
+
+    canvas.restore();
   }
 
-  void _drawShape(Canvas canvas, ShapeData shape, Paint fillPaint, Paint strokePaint) {
+  void _drawShape(
+      Canvas canvas, ShapeData shape, Paint fillPaint, Paint strokePaint) {
     final center = shape.position;
     final size = shape.size;
 
@@ -1478,7 +1798,8 @@ class ColoringCanvasPainter extends CustomPainter {
     }
   }
 
-  void _drawHeart(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawHeart(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     final path = Path();
     path.moveTo(center.dx, center.dy + size * 0.3);
     path.cubicTo(
@@ -1501,7 +1822,8 @@ class ColoringCanvasPainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawStar(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawStar(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     final path = Path();
     for (int i = 0; i < 10; i++) {
       final radius = i.isEven ? size : size * 0.4;
@@ -1519,7 +1841,8 @@ class ColoringCanvasPainter extends CustomPainter {
     canvas.drawPath(path, stroke);
   }
 
-  void _drawFlower(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawFlower(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     for (int i = 0; i < 6; i++) {
       final angle = i * 60 * math.pi / 180;
       final petalCenter = Offset(
@@ -1533,7 +1856,8 @@ class ColoringCanvasPainter extends CustomPainter {
     canvas.drawCircle(center, size * 0.2, stroke);
   }
 
-  void _drawButterfly(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawButterfly(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     canvas.drawOval(
       Rect.fromCenter(
           center: Offset(center.dx - size * 0.3, center.dy - size * 0.15),
@@ -1593,11 +1917,13 @@ class ColoringCanvasPainter extends CustomPainter {
     final bodyPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawLine(center, Offset(center.dx, center.dy + size * 0.4), bodyPaint);
+      ..strokeWidth = stroke.strokeWidth;
+    canvas.drawLine(
+        center, Offset(center.dx, center.dy + size * 0.4), bodyPaint);
   }
 
-  void _drawSun(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawSun(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     canvas.drawCircle(center, size * 0.3, fill);
     canvas.drawCircle(center, size * 0.3, stroke);
     for (int i = 0; i < 12; i++) {
@@ -1613,12 +1939,13 @@ class ColoringCanvasPainter extends CustomPainter {
       final rayPaint = Paint()
         ..color = Colors.black
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+        ..strokeWidth = stroke.strokeWidth * (2 / 3);
       canvas.drawLine(start, end, rayPaint);
     }
   }
 
-  void _drawMoon(Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
+  void _drawMoon(
+      Canvas canvas, Offset center, double size, Paint fill, Paint stroke) {
     canvas.drawCircle(center, size * 0.4, fill);
     canvas.drawCircle(center, size * 0.4, stroke);
   }
