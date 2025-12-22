@@ -12,8 +12,7 @@ void main() {
 
     // Verify that the intro page elements are displayed.
     expect(find.text('Color Your Mind'), findsOneWidget);
-    expect(find.text('Unleash Your Creativity'), findsOneWidget);
-    expect(find.text('Start Coloring'), findsOneWidget);
+    expect(find.text('Relax and color.'), findsOneWidget);
     expect(find.byIcon(Icons.palette), findsOneWidget);
   });
 }
