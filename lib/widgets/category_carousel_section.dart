@@ -83,45 +83,49 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
   Widget build(BuildContext context) {
     if (widget.images.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  widget.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '(${widget.images.length})',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 200,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              _maybeUpdateController(constraints.maxWidth);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 800;
 
-              return Stack(
+        if (isDesktop) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildTitle(),
+              const SizedBox(height: 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 300, // Makes items "pretty" size, effectively "small" enough
+                  childAspectRatio: 1.4,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                itemCount: widget.images.length,
+                itemBuilder: (context, i) {
+                  final image = widget.images[i];
+                  return ColoringImageCard(
+                    image: image,
+                    onTap: () => widget.onTapImage(image),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+            ],
+          );
+        }
+
+        // Mobile: Carousel
+        _maybeUpdateController(constraints.maxWidth);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTitle(),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 200,
+              child: Stack(
                 children: [
                   PageView.builder(
                     padEnds: false,
@@ -170,11 +174,42 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
                       ),
                     ),
                 ],
-              );
-            },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTitle() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              widget.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            '(${widget.images.length})',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

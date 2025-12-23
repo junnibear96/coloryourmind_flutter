@@ -322,8 +322,15 @@ class _ColoringPageState extends State<ColoringPage> {
     }
 
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): _undo,
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true): _redo,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: Colors.grey.shade100,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -350,6 +357,8 @@ class _ColoringPageState extends State<ColoringPage> {
               ],
             );
           },
+        ),
+      ),
         ),
       ),
     );
@@ -497,6 +506,33 @@ class _ColoringPageState extends State<ColoringPage> {
               max: 50.0,
               onChanged: (v) => setState(() => _brushSize = v),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Text('Size: '),
+                  SizedBox(
+                    width: 50,
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      onSubmitted: (value) {
+                        final val = double.tryParse(value);
+                        if (val != null) {
+                          setState(() => _brushSize = val.clamp(1.0, 50.0));
+                        }
+                      },
+                      controller: TextEditingController(text: _brushSize.toInt().toString())
+                        ..selection = TextSelection.collapsed(offset: _brushSize.toInt().toString().length),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
           const Spacer(),
           const Divider(),
@@ -623,20 +659,18 @@ class _ColoringPageState extends State<ColoringPage> {
   }
 
   Widget _buildBrushStyleSelector() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: BrushStyle.values.map((style) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(style.name.toUpperCase()),
-              selected: _brushStyle == style,
-              onSelected: (selected) {
-                if (selected) setState(() => _brushStyle = style);
-              },
-            ),
+          return ChoiceChip(
+            label: Text(style.name.toUpperCase()),
+            selected: _brushStyle == style,
+             onSelected: (selected) {
+              if (selected) setState(() => _brushStyle = style);
+            },
           );
         }).toList(),
       ),
