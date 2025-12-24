@@ -26,10 +26,12 @@ void main() {
 
       // Side panel check (Desktop)
       expect(find.text('색상'), findsOneWidget); // Side panel has 'Colors' title (KR)
-      expect(find.byType(Wrap), findsOneWidget); // Brush styles in side panel
+      expect(find.byType(BackButton), findsOneWidget);
+      expect(find.byIcon(Icons.undo), findsOneWidget);
+      expect(find.byIcon(Icons.redo), findsOneWidget);
       
       // Check for Brush Size Input
-      expect(find.byType(TextField), findsOneWidget); 
+      expect(find.byType(TextField), findsWidgets);
     });
 
     testWidgets('Displays bottom controls on mobile', (WidgetTester tester) async {

@@ -2,6 +2,8 @@
 
 A coloring book mobile (Android/iOS) and web application built with Flutter.
 
+See [ROADMAP.md](ROADMAP.md) for planned milestones and priorities.
+
 ## Getting Started
 
 This project is a Flutter application that supports multiple platforms:
@@ -78,9 +80,12 @@ test/                 # Test files
 ## Features
 
 - Cross-platform support (Android, iOS, Web)
-- Material Design 3
-- Responsive layout
-- Coloring book functionality (coming soon)
+- Material Design 3 + responsive layout
+- Gallery-style home with search + category carousels
+- Drawing canvas with brush/eraser, multiple brush styles, and brush size controls
+- Undo/redo and reset
+- Export to PNG/JPG (download-based on web)
+- Basic EN/KR localization toggle
 
 ## Contributing
 

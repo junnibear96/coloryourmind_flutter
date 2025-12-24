@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
 
 import '../models/coloring_image.dart';
 import '../models/drawing_tool.dart';
@@ -33,9 +35,22 @@ class ColoringPage extends StatefulWidget {
 class _ColoringPageState extends State<ColoringPage> {
   // Canvas State
   final List<DrawnLine> _lines = [];
-  final List<DrawnLine> _redos = [];
   final List<CanvasObject> _objects = [];
   DrawnLine? _currentLine;
+
+  final List<_CanvasAction> _actions = [];
+  final List<_CanvasAction> _actionRedos = [];
+
+  String? _selectedObjectId;
+
+  CanvasObject? _transformingObject;
+  Offset? _transformStartFocalCanvasPos;
+  Offset? _transformStartObjectPos;
+  double? _transformStartObjectSize;
+  double? _transformStartRotation;
+
+  double? _sliderStartSize;
+  double? _sliderStartRotation;
 
   final GlobalKey _canvasKey = GlobalKey();
 
@@ -107,23 +122,21 @@ class _ColoringPageState extends State<ColoringPage> {
   // --- Actions ---
 
   void _undo() {
-    if (_lines.isNotEmpty) {
-      setState(() {
-        _redos.add(_lines.removeLast());
-      });
-    } else if (_objects.isNotEmpty) {
-      setState(() {
-        _objects.removeLast(); // Simple object undo
-      });
-    }
+    if (_actions.isEmpty) return;
+    setState(() {
+      final action = _actions.removeLast();
+      action.undo();
+      _actionRedos.add(action);
+    });
   }
 
   void _redo() {
-    if (_redos.isNotEmpty) {
-      setState(() {
-        _lines.add(_redos.removeLast());
-      });
-    }
+    if (_actionRedos.isEmpty) return;
+    setState(() {
+      final action = _actionRedos.removeLast();
+      action.redo();
+      _actions.add(action);
+    });
   }
 
   void _clearCanvas() {
@@ -142,7 +155,10 @@ class _ColoringPageState extends State<ColoringPage> {
               Navigator.pop(ctx);
               setState(() {
                 _lines.clear();
-                _redos.clear();
+                _objects.clear();
+                _selectedObjectId = null;
+                _actions.clear();
+                _actionRedos.clear();
               });
             },
             child: Text(tr('지우기', 'Clear'),
@@ -172,19 +188,42 @@ class _ColoringPageState extends State<ColoringPage> {
       exportPainter.paint(canvas, size);
 
       final picture = recorder.endRecording();
-      final img = await picture.toImage(_baseCanvasSize.toInt(), _baseCanvasSize.toInt());
-      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-      
-      if (byteData == null) return;
+      final rendered =
+          await picture.toImage(_baseCanvasSize.toInt(), _baseCanvasSize.toInt());
 
-      final bytes = byteData.buffer.asUint8List();
+      Uint8List? bytes;
+      String mimeType;
+      String extension;
+
+      if (format == SaveFormat.jpg) {
+        final rgba =
+            await rendered.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (rgba == null) return;
+        final im = img.Image.fromBytes(
+          width: rendered.width,
+          height: rendered.height,
+          bytes: rgba.buffer,
+          order: img.ChannelOrder.rgba,
+        );
+        bytes = Uint8List.fromList(img.encodeJpg(im, quality: 92));
+        mimeType = 'image/jpeg';
+        extension = 'jpg';
+      } else {
+        final byteData =
+            await rendered.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData == null) return;
+        bytes = byteData.buffer.asUint8List();
+        mimeType = 'image/png';
+        extension = 'png';
+      }
+
       final fileName =
-          'coloring_${DateTime.now().millisecondsSinceEpoch}.${format.name}';
-      
+          'coloring_${DateTime.now().millisecondsSinceEpoch}.$extension';
+
       downloadBytes(
         bytes: bytes,
         filename: fileName,
-        mimeType: 'image/${format.name}',
+        mimeType: mimeType,
       );
 
       // Add to uploaded images for "My Drawings"
@@ -219,6 +258,215 @@ class _ColoringPageState extends State<ColoringPage> {
 
   // --- Input Handling ---
 
+  CanvasObject? _selectedTextObject() {
+    final id = _selectedObjectId;
+    if (id == null) return null;
+    final obj = _objects.where((o) => o.id == id).cast<CanvasObject?>().firstOrNull;
+    if (obj == null) return null;
+    if (obj.type != CanvasObjectType.text) return null;
+    return obj;
+  }
+
+  double _getTextRotation(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['rotation'] is num) {
+      return (data['rotation'] as num).toDouble();
+    }
+    return 0.0;
+  }
+
+  void _setTextRotation(CanvasObject obj, double radians) {
+    final data = obj.data;
+    if (data is Map) {
+      data['rotation'] = radians;
+    }
+  }
+
+  CanvasObject? _hitTestObject(Offset canvasPos) {
+    for (final obj in _objects.reversed) {
+      if (obj.type != CanvasObjectType.text) continue;
+      final text = (obj.data is Map) ? ((obj.data['text'] as String?) ?? '') : '';
+      final color = (obj.data is Map && obj.data['color'] is Color)
+          ? (obj.data['color'] as Color)
+          : Colors.black;
+      final tp = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            fontSize: math.max(10.0, obj.size / 2),
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      final rect = Rect.fromCenter(
+        center: obj.position,
+        width: tp.width + 24,
+        height: tp.height + 24,
+      );
+      if (rect.contains(canvasPos)) return obj;
+    }
+    return null;
+  }
+
+  Future<void> _addTextAt(Offset canvasPos) async {
+    final controller = TextEditingController();
+    final text = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('텍스트 추가', 'Add Text')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: tr('내용 입력', 'Enter text'),
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(tr('취소', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(tr('추가', 'Add')),
+          ),
+        ],
+      ),
+    );
+
+    final v = text?.trim();
+    if (v == null || v.isEmpty) return;
+
+    final obj = CanvasObject(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      position: canvasPos,
+      size: 64,
+      type: CanvasObjectType.text,
+      data: {
+        'text': v,
+        'color': _currentColor,
+        'rotation': 0.0,
+      },
+    );
+
+    setState(() {
+      final action = _AddObjectAction(objects: _objects, object: obj);
+      action.redo();
+      _actions.add(action);
+      _actionRedos.clear();
+      _selectedObjectId = obj.id;
+    });
+  }
+
+  void _deleteSelectedText() {
+    final obj = _selectedTextObject();
+    if (obj == null) return;
+    final index = _objects.indexOf(obj);
+    if (index < 0) return;
+    setState(() {
+      final action = _RemoveObjectAction(
+        objects: _objects,
+        index: index,
+        object: obj,
+      );
+      action.redo();
+      _actions.add(action);
+      _actionRedos.clear();
+      _selectedObjectId = null;
+    });
+  }
+
+  void _onTapDown(TapDownDetails d) {
+    if (_selectedTool != DrawingTool.text) return;
+    final canvasPos = _mapToCanvas(d.localPosition);
+    final hit = _hitTestObject(canvasPos);
+    if (hit != null) {
+      setState(() {
+        _selectedObjectId = hit.id;
+      });
+      return;
+    }
+    setState(() {
+      _selectedObjectId = null;
+    });
+    unawaited(_addTextAt(canvasPos));
+  }
+
+  void _onScaleStart(ScaleStartDetails d) {
+    if (_selectedTool != DrawingTool.text) return;
+    final canvasPos = _mapToCanvas(d.localFocalPoint);
+    final hit = _hitTestObject(canvasPos);
+    if (hit == null) return;
+    setState(() {
+      _selectedObjectId = hit.id;
+      _transformingObject = hit;
+      _transformStartFocalCanvasPos = canvasPos;
+      _transformStartObjectPos = hit.position;
+      _transformStartObjectSize = hit.size;
+      _transformStartRotation = _getTextRotation(hit);
+    });
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    final obj = _transformingObject;
+    final startFocal = _transformStartFocalCanvasPos;
+    final startPos = _transformStartObjectPos;
+    final startSize = _transformStartObjectSize;
+    final startRot = _transformStartRotation;
+    if (obj == null || startFocal == null || startPos == null || startSize == null || startRot == null) {
+      return;
+    }
+
+    final focal = _mapToCanvas(d.localFocalPoint);
+    final delta = focal - startFocal;
+    final nextSize = (startSize * d.scale).clamp(20.0, 300.0);
+    final nextRot = startRot + d.rotation;
+    setState(() {
+      obj.position = startPos + delta;
+      obj.size = nextSize;
+      _setTextRotation(obj, nextRot);
+    });
+  }
+
+  void _onScaleEnd(ScaleEndDetails d) {
+    final obj = _transformingObject;
+    final startPos = _transformStartObjectPos;
+    final startSize = _transformStartObjectSize;
+    final startRot = _transformStartRotation;
+    if (obj != null && startPos != null && startSize != null && startRot != null) {
+      final toPos = obj.position;
+      final toSize = obj.size;
+      final toRot = _getTextRotation(obj);
+      if (toPos != startPos || toSize != startSize || toRot != startRot) {
+        setState(() {
+          final action = _TransformObjectAction(
+            object: obj,
+            fromPos: startPos,
+            toPos: toPos,
+            fromSize: startSize,
+            toSize: toSize,
+            fromRotation: startRot,
+            toRotation: toRot,
+            setRotation: (r) => _setTextRotation(obj, r),
+          );
+          _actions.add(action);
+          _actionRedos.clear();
+        });
+      }
+    }
+    setState(() {
+      _transformingObject = null;
+      _transformStartFocalCanvasPos = null;
+      _transformStartObjectPos = null;
+      _transformStartObjectSize = null;
+      _transformStartRotation = null;
+    });
+  }
+
   void _onPanStart(DragStartDetails d) {
     if (_selectedTool == DrawingTool.brush ||
         _selectedTool == DrawingTool.eraser ||
@@ -252,9 +500,12 @@ class _ColoringPageState extends State<ColoringPage> {
   void _onPanEnd(DragEndDetails d) {
     if (_currentLine != null) {
       setState(() {
-        _lines.add(_currentLine!);
+        final line = _currentLine!;
         _currentLine = null;
-        _redos.clear();
+        final action = _AddLineAction(lines: _lines, line: line);
+        action.redo();
+        _actions.add(action);
+        _actionRedos.clear();
       });
     }
   }
@@ -383,9 +634,19 @@ class _ColoringPageState extends State<ColoringPage> {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return GestureDetector(
-                        onPanStart: _onPanStart,
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
+                        onTapDown: _onTapDown,
+                        onPanStart:
+                            _selectedTool == DrawingTool.text ? null : _onPanStart,
+                        onPanUpdate:
+                            _selectedTool == DrawingTool.text ? null : _onPanUpdate,
+                        onPanEnd:
+                            _selectedTool == DrawingTool.text ? null : _onPanEnd,
+                        onScaleStart:
+                            _selectedTool == DrawingTool.text ? _onScaleStart : null,
+                        onScaleUpdate:
+                            _selectedTool == DrawingTool.text ? _onScaleUpdate : null,
+                        onScaleEnd:
+                            _selectedTool == DrawingTool.text ? _onScaleEnd : null,
                         child: Container(
                           key: _canvasKey,
                           color: Colors.white,
@@ -396,6 +657,8 @@ class _ColoringPageState extends State<ColoringPage> {
                               shapes: widget.coloringImage.shapes,
                               shapeColors: {},
                               lines: _lines,
+                              canvasObjects: _objects,
+                              selectedObjectId: _selectedObjectId,
                               currentLine: _currentLine,
                               baseCanvasSize: _baseCanvasSize,
                             ),
@@ -447,92 +710,132 @@ class _ColoringPageState extends State<ColoringPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.undo),
-                    onPressed: _lines.isNotEmpty || _objects.isNotEmpty ? _undo : null,
+                    onPressed: _actions.isNotEmpty ? _undo : null,
                   ),
                   IconButton(
                     icon: const Icon(Icons.redo),
-                    onPressed: _redos.isNotEmpty ? _redo : null,
+                    onPressed: _actionRedos.isNotEmpty ? _redo : null,
                   ),
                 ],
               ),
             ],
           ),
           const Divider(),
-          const SizedBox(height: 10),
-          // Tools
-          Text(tr('도구', 'Tools'), style: const TextStyle(fontWeight: FontWeight.bold)),
-          Wrap(
-            spacing: 8,
-            children: [
-              _buildToolButton(DrawingTool.brush, Icons.brush),
-              _buildToolButton(DrawingTool.eraser, Icons.cleaning_services),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Colors
-          Text(tr('색상', 'Colors'), style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: _openColorPicker,
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: _currentColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(tr('색상 변경', 'Change Color')),
-              ],
-            ),
-          ),
-          if (_selectedTool == DrawingTool.brush) ...[
-            const SizedBox(height: 20),
-            Text(tr('브러시', 'Brush Style'), style: const TextStyle(fontWeight: FontWeight.bold)),
-            _buildBrushStyleSelector(),
-            const SizedBox(height: 10),
-            Text(tr('크기', 'Size'), style: const TextStyle(fontWeight: FontWeight.bold)),
-            Slider(
-              value: _brushSize,
-              min: 1.0,
-              max: 50.0,
-              onChanged: (v) => setState(() => _brushSize = v),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Size: '),
-                  SizedBox(
-                    width: 50,
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      onSubmitted: (value) {
-                        final val = double.tryParse(value);
-                        if (val != null) {
-                          setState(() => _brushSize = val.clamp(1.0, 50.0));
-                        }
-                      },
-                      controller: TextEditingController(text: _brushSize.toInt().toString())
-                        ..selection = TextSelection.collapsed(offset: _brushSize.toInt().toString().length),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        border: OutlineInputBorder(),
-                      ),
+                  const SizedBox(height: 10),
+                  // Tools
+                  Text(tr('도구', 'Tools'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _buildToolButton(DrawingTool.brush, Icons.brush),
+                      _buildToolButton(
+                          DrawingTool.eraser, Icons.cleaning_services),
+                      _buildToolButton(DrawingTool.text, Icons.text_fields),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Colors
+                  Text(tr('색상', 'Colors'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _openColorPicker,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _currentColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(tr('색상 변경', 'Change Color')),
+                      ],
                     ),
                   ),
+                  if (_selectedTool == DrawingTool.brush) ...[
+                    const SizedBox(height: 20),
+                    Text(tr('브러시', 'Brush Style'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    _buildBrushStyleSelector(),
+                    const SizedBox(height: 10),
+                    Text(tr('크기', 'Size'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Slider(
+                      value: _brushSize,
+                      min: 1.0,
+                      max: 50.0,
+                      onChanged: (v) => setState(() => _brushSize = v),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          const Text('Size: '),
+                          SizedBox(
+                            width: 50,
+                            child: TextField(
+                              keyboardType: TextInputType.number,
+                              onSubmitted: (value) {
+                                final val = double.tryParse(value);
+                                if (val != null) {
+                                  setState(() =>
+                                      _brushSize = val.clamp(1.0, 50.0));
+                                }
+                              },
+                              controller: TextEditingController(
+                                  text: _brushSize.toInt().toString())
+                                ..selection = TextSelection.collapsed(
+                                    offset:
+                                        _brushSize.toInt().toString().length),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (_selectedTool == DrawingTool.text) ...[
+                    const SizedBox(height: 20),
+                    Text(tr('텍스트', 'Text'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    _buildTextSizeControl(isCompact: false),
+                    const SizedBox(height: 10),
+                    _buildTextRotationControl(isCompact: false),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.delete_outline,
+                            color: Colors.red),
+                        tooltip: tr('텍스트 삭제', 'Delete Text'),
+                        onPressed: _selectedTextObject() == null
+                            ? null
+                            : _deleteSelectedText,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ],
-          const Spacer(),
+          ),
           const Divider(),
-           Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
                IconButton(
@@ -541,7 +844,7 @@ class _ColoringPageState extends State<ColoringPage> {
                 onPressed: _clearCanvas,
               ),
               ElevatedButton.icon(
-                onPressed: () => _saveImage(SaveFormat.png),
+                    onPressed: () => _saveImage(SaveFormat.png),
                 icon: const Icon(Icons.save_alt),
                 label: Text(tr('저장', 'Save')),
               )
@@ -566,11 +869,11 @@ class _ColoringPageState extends State<ColoringPage> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.undo),
-            onPressed: _lines.isNotEmpty || _objects.isNotEmpty ? _undo : null,
+            onPressed: _actions.isNotEmpty ? _undo : null,
           ),
           IconButton(
             icon: const Icon(Icons.redo),
-            onPressed: _redos.isNotEmpty ? _redo : null,
+            onPressed: _actionRedos.isNotEmpty ? _redo : null,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -613,6 +916,7 @@ class _ColoringPageState extends State<ColoringPage> {
               children: [
                 _buildToolButton(DrawingTool.brush, Icons.brush),
                 _buildToolButton(DrawingTool.eraser, Icons.cleaning_services),
+                _buildToolButton(DrawingTool.text, Icons.text_fields),
                  // More tools...
                 const SizedBox(width: 16),
                 GestureDetector(
@@ -640,8 +944,212 @@ class _ColoringPageState extends State<ColoringPage> {
               onChanged: (v) => setState(() => _brushSize = v),
             ),
           ],
+          if (_selectedTool == DrawingTool.text) ...[
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  _buildTextSizeControl(isCompact: true),
+                  const SizedBox(height: 8),
+                  _buildTextRotationControl(isCompact: true),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildTextSizeControl({required bool isCompact}) {
+    final obj = _selectedTextObject();
+    final fontSize = obj == null ? 32.0 : (obj.size / 2);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(tr('크기', 'Size'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        Slider(
+          value: fontSize.clamp(10.0, 150.0),
+          min: 10.0,
+          max: 150.0,
+          onChangeStart: obj == null
+              ? null
+              : (v) => _sliderStartSize = (obj.size / 2),
+          onChanged: obj == null
+              ? null
+              : (v) {
+                  setState(() {
+                    obj.size = (v * 2).clamp(20.0, 300.0);
+                  });
+                },
+          onChangeEnd: obj == null
+              ? null
+              : (v) {
+                  final from = _sliderStartSize;
+                  if (from == null) return;
+                  final to = v;
+                  if (from == to) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: from * 2,
+                      toSize: (to * 2).clamp(20.0, 300.0),
+                      fromRotation: _getTextRotation(obj),
+                      toRotation: _getTextRotation(obj),
+                      setRotation: (r) => _setTextRotation(obj, r),
+                    );
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+        ),
+        Row(
+          children: [
+            Text(isCompact ? tr('크기', 'Size') : 'Size: '),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 72,
+              child: TextField(
+                enabled: obj != null,
+                keyboardType: TextInputType.number,
+                onSubmitted: (value) {
+                  final val = double.tryParse(value);
+                  if (val == null || obj == null) return;
+                  final clamped = val.clamp(10.0, 150.0);
+                  final fromSize = obj.size;
+                  final toSize = (clamped * 2).clamp(20.0, 300.0);
+                  if (fromSize == toSize) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: fromSize,
+                      toSize: toSize,
+                      fromRotation: _getTextRotation(obj),
+                      toRotation: _getTextRotation(obj),
+                      setRotation: (r) => _setTextRotation(obj, r),
+                    );
+                    action.redo();
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+                controller: TextEditingController(text: fontSize.toInt().toString())
+                  ..selection = TextSelection.collapsed(
+                      offset: fontSize.toInt().toString().length),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextRotationControl({required bool isCompact}) {
+    final obj = _selectedTextObject();
+    final radians = obj == null ? 0.0 : _getTextRotation(obj);
+    final degrees = radians * 180 / math.pi;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(tr('회전', 'Rotation'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        Slider(
+          value: degrees.clamp(-180.0, 180.0),
+          min: -180.0,
+          max: 180.0,
+          onChangeStart: obj == null
+              ? null
+              : (v) => _sliderStartRotation = _getTextRotation(obj),
+          onChanged: obj == null
+              ? null
+              : (v) {
+                  setState(() {
+                    _setTextRotation(obj, v * math.pi / 180.0);
+                  });
+                },
+          onChangeEnd: obj == null
+              ? null
+              : (v) {
+                  final from = _sliderStartRotation;
+                  if (from == null) return;
+                  final to = v * math.pi / 180.0;
+                  if (from == to) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: obj.size,
+                      toSize: obj.size,
+                      fromRotation: from,
+                      toRotation: to,
+                      setRotation: (r) => _setTextRotation(obj, r),
+                    );
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+        ),
+        Row(
+          children: [
+            Text(isCompact ? tr('회전', 'Rot') : 'Deg: '),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 72,
+              child: TextField(
+                enabled: obj != null,
+                keyboardType: TextInputType.number,
+                onSubmitted: (value) {
+                  final val = double.tryParse(value);
+                  if (val == null || obj == null) return;
+                  final clamped = val.clamp(-180.0, 180.0);
+                  final fromRot = _getTextRotation(obj);
+                  final toRot = clamped * math.pi / 180.0;
+                  if (fromRot == toRot) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: obj.size,
+                      toSize: obj.size,
+                      fromRotation: fromRot,
+                      toRotation: toRot,
+                      setRotation: (r) => _setTextRotation(obj, r),
+                    );
+                    action.redo();
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+                controller: TextEditingController(text: degrees.toInt().toString())
+                  ..selection = TextSelection.collapsed(
+                      offset: degrees.toInt().toString().length),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -672,6 +1180,110 @@ class _ColoringPageState extends State<ColoringPage> {
       ),
     );
   }
+}
+
+abstract class _CanvasAction {
+  void undo();
+  void redo();
+}
+
+class _AddLineAction implements _CanvasAction {
+  final List<DrawnLine> lines;
+  final DrawnLine line;
+
+  _AddLineAction({required this.lines, required this.line});
+
+  @override
+  void redo() => lines.add(line);
+
+  @override
+  void undo() {
+    if (lines.isNotEmpty) {
+      lines.removeLast();
+    }
+  }
+}
+
+class _AddObjectAction implements _CanvasAction {
+  final List<CanvasObject> objects;
+  final CanvasObject object;
+
+  _AddObjectAction({required this.objects, required this.object});
+
+  @override
+  void redo() => objects.add(object);
+
+  @override
+  void undo() {
+    objects.remove(object);
+  }
+}
+
+class _RemoveObjectAction implements _CanvasAction {
+  final List<CanvasObject> objects;
+  final int index;
+  final CanvasObject object;
+
+  _RemoveObjectAction({
+    required this.objects,
+    required this.index,
+    required this.object,
+  });
+
+  @override
+  void redo() {
+    if (index >= 0 && index < objects.length) {
+      objects.removeAt(index);
+    } else {
+      objects.remove(object);
+    }
+  }
+
+  @override
+  void undo() {
+    final i = index.clamp(0, objects.length);
+    objects.insert(i, object);
+  }
+}
+
+class _TransformObjectAction implements _CanvasAction {
+  final CanvasObject object;
+  final Offset fromPos;
+  final Offset toPos;
+  final double fromSize;
+  final double toSize;
+  final double fromRotation;
+  final double toRotation;
+  final void Function(double radians) setRotation;
+
+  _TransformObjectAction({
+    required this.object,
+    required this.fromPos,
+    required this.toPos,
+    required this.fromSize,
+    required this.toSize,
+    required this.fromRotation,
+    required this.toRotation,
+    required this.setRotation,
+  });
+
+  @override
+  void redo() {
+    object.position = toPos;
+    object.size = toSize;
+    setRotation(toRotation);
+  }
+
+  @override
+  void undo() {
+    object.position = fromPos;
+    object.size = fromSize;
+    setRotation(fromRotation);
+  }
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
 
 

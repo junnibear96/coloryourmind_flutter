@@ -4,8 +4,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/intro_page.dart';
 
 import 'state/app_state.dart';
+import 'state/my_drawings_store.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  uploadedImagesNotifier.value = await loadMyDrawings();
   runApp(const ColorYourMindApp());
 }
 

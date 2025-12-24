@@ -85,7 +85,11 @@ class ExportCanvasPainter {
         final color = (obj.data is Map && obj.data['color'] is Color)
             ? (obj.data['color'] as Color)
             : Colors.black;
-        _drawText(canvas, text, obj.position, obj.size / 2, color);
+        final rotation = (obj.data is Map && obj.data['rotation'] is num)
+            ? (obj.data['rotation'] as num).toDouble()
+            : 0.0;
+        _drawText(canvas, text, obj.position, obj.size / 2, color,
+            rotation: rotation);
       }
     }
 
@@ -140,6 +144,9 @@ class ExportCanvasPainter {
     Offset center,
     double fontSize,
     Color color,
+    {
+    double rotation = 0.0,
+  }
   ) {
     final tp = TextPainter(
       text: TextSpan(
@@ -153,7 +160,14 @@ class ExportCanvasPainter {
       textDirection: TextDirection.ltr,
       maxLines: 1,
     )..layout();
-    tp.paint(
-        canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    if (rotation != 0.0) {
+      canvas.rotate(rotation);
+    }
+    final topLeft = Offset(-tp.width / 2, -tp.height / 2);
+    tp.paint(canvas, topLeft);
+    canvas.restore();
   }
 }

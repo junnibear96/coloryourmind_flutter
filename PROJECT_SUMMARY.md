@@ -2,136 +2,65 @@
 
 ## Overview
 
-This is a complete Flutter project initialization for a cross-platform coloring book application supporting:
-- **Android** (AOS)
+This is a Flutter-based cross-platform coloring book application supporting:
+- **Android**
 - **iOS**
 - **Web**
 
-## Project Structure
+For the step-by-step development plan, see [ROADMAP.md](ROADMAP.md).
+
+## Project Structure (current)
 
 ```
 coloryourmind_flutter/
-├── .gitignore                    # Flutter-specific git ignore rules
-├── .metadata                     # Flutter project metadata
-├── README.md                     # Project overview and quick start
-├── GETTING_STARTED.md            # Detailed setup and troubleshooting guide
-├── LICENSE                       # Project license
-├── analysis_options.yaml         # Dart linting rules
-├── pubspec.yaml                  # Flutter dependencies and assets
-│
-├── lib/
-│   └── main.dart                 # App entry point with welcome screen
-│
-├── test/
-│   └── widget_test.dart          # Basic widget tests
-│
+├── README.md
+├── ROADMAP.md
+├── GETTING_STARTED.md
+├── analysis_options.yaml
+├── pubspec.yaml
 ├── assets/
-│   ├── README.md                 # Assets usage guide
-│   ├── images/                   # Image assets directory
-│   └── fonts/                    # Font assets directory
-│
-├── android/                      # Android platform files
-│   ├── build.gradle              # Root build configuration
-│   ├── settings.gradle           # Gradle settings
-│   ├── gradle.properties         # Gradle properties
-│   ├── gradle/wrapper/           # Gradle wrapper
-│   └── app/
-│       ├── build.gradle          # App build configuration
-│       └── src/main/
-│           ├── AndroidManifest.xml
-│           ├── kotlin/com/coloryourmind/coloryourmind_flutter/
-│           │   └── MainActivity.kt
-│           └── res/
-│               ├── README.md     # Icon assets guide
-│               └── values/
-│                   └── styles.xml
-│
-├── ios/                          # iOS platform files
-│   ├── Podfile                   # CocoaPods dependencies
-│   ├── Runner.xcodeproj/         # Xcode project
-│   ├── Runner.xcworkspace/       # Xcode workspace
-│   └── Runner/
-│       ├── AppDelegate.swift     # iOS app delegate
-│       ├── Info.plist            # iOS app configuration
-│       └── Assets.xcassets/
-│           └── README.md         # iOS assets guide
-│
-└── web/                          # Web platform files
-    ├── index.html                # Web app entry point
-    ├── manifest.json             # PWA manifest
-    └── icons/
-        └── README.md             # Web icon assets guide
+│   └── images/
+├── lib/
+│   ├── main.dart                 # App entry + locale wiring
+│   ├── screens/                  # Intro + coloring screens
+│   ├── widgets/                  # Canvas painters + UI widgets
+│   ├── models/                   # Drawing/document models
+│   ├── utils/                    # Localization + drawing/shape helpers
+│   ├── state/                    # App-wide notifiers (locale, uploads)
+│   └── download/                 # Web vs non-web download abstraction
+└── test/
+   ├── widget_test.dart
+   └── coloring_page_test.dart
 
-## Key Features
+## Key Features (implemented)
 
 ### 1. Cross-Platform Support
 - Single codebase for Android, iOS, and Web
-- Platform-specific configurations included
-- Ready for deployment to app stores and web hosting
+- Web download implementation via conditional imports
 
-### 2. Material Design 3
-- Modern UI using Material Design 3
-- Deep purple color scheme
-- Responsive layouts
+### 2. Material Design 3 + Responsive UI
+- Material 3 theme
+- Desktop: tool side panel
+- Mobile: bottom tool controls
 
-### 3. Development Ready
-- Linting configuration with flutter_lints
-- Basic test structure
-- Hot reload support for fast development
+### 3. Drawing & Export
+- Brush + eraser drawing
+- Multiple brush styles
+- Undo/redo + reset
+- Export to PNG/JPG
 
-### 4. Production Ready Structure
-- Proper .gitignore for Flutter
-- Gradle configuration for Android builds
-- Xcode project for iOS builds
-- PWA manifest for web deployment
+### 4. Localization
+- EN/KR toggle using a simple translation helper
 
 ## Current State
 
-The project is fully initialized and ready for development. The app currently displays:
-- Welcome screen with app title
-- Palette icon
-- Material Design theme
-- Basic app structure
+The app includes:
+- A gallery home screen (`IntroPage`) with search and category carousels
+- A full coloring screen (`ColoringPage`) with drawing tools and export
 
 ## Next Development Steps
 
-1. **Add Coloring Pages**
-   - Design or import coloring page templates
-   - Implement page selection UI
-
-2. **Implement Drawing Features**
-   - Touch/mouse drawing support
-   - Color picker
-   - Brush sizes
-   - Eraser tool
-   - Undo/redo functionality
-
-3. **Add State Management**
-   - Choose between Provider, Riverpod, or Bloc
-   - Manage drawing state
-   - Save/load functionality
-
-4. **Enhanced UI**
-   - Gallery view for coloring pages
-   - Categories/themes
-   - User profile
-   - Settings screen
-
-5. **Platform-Specific Features**
-   - Custom app icons for all platforms
-   - Splash screens
-   - Share functionality
-   - Save to gallery (mobile)
-
-6. **Performance Optimization**
-   - Image caching
-   - Lazy loading
-   - Memory management for drawing
-
-7. **Testing**
-   - Unit tests
-   - Widget tests
-   - Integration tests
+See [ROADMAP.md](ROADMAP.md) for milestone-based planning (foundation refactor, fill/picker tools, persistence, sharing, release readiness).
 
 ## Build Commands
 

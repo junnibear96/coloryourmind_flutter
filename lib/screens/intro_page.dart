@@ -85,7 +85,7 @@ class _IntroPageState extends State<IntroPage> {
                               return const SizedBox.shrink();
                             }
                             return CategoryCarouselSection(
-                              title: tr('내 그림', 'My Drawings'),
+                              title: tr('내 항목', 'My Items'),
                               images: uploaded,
                               onTapImage: _openUploadedImage,
                             );
