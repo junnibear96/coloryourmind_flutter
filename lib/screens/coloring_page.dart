@@ -37,6 +37,8 @@ class _ColoringPageState extends State<ColoringPage> {
   final List<CanvasObject> _objects = [];
   DrawnLine? _currentLine;
 
+  final GlobalKey _canvasKey = GlobalKey();
+
   // Tools & Properties
   DrawingTool _selectedTool = DrawingTool.brush;
   BrushStyle _brushStyle = BrushStyle.basic;
@@ -258,14 +260,7 @@ class _ColoringPageState extends State<ColoringPage> {
   }
 
   Offset _mapToCanvas(Offset local) {
-    // Defines how the widget local coordinates map to the 512x512 canvas.
-    // Assuming the widget is square and fits the aspect ratio.
-    // If widget size is WxH, and W=H (due to AspectRatio 1), then:
-    // x_canvas = x_local / W * 512
-    // We need the widget size.
-    // In `build`, we can use LayoutBuilder to get the size, but for `onPan` we assume context size?
-    // A simplified approach is used here.
-    final box = context.findRenderObject() as RenderBox?;
+    final box = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return local;
     final size = box.size;
     final scale = _baseCanvasSize / size.width;
@@ -392,6 +387,7 @@ class _ColoringPageState extends State<ColoringPage> {
                         onPanUpdate: _onPanUpdate,
                         onPanEnd: _onPanEnd,
                         child: Container(
+                          key: _canvasKey,
                           color: Colors.white,
                           child: CustomPaint(
                             size: Size(_baseCanvasSize, _baseCanvasSize),
