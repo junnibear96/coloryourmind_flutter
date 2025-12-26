@@ -22,6 +22,7 @@ import '../state/my_drawings_store.dart';
 import '../utils/localization_utils.dart';
 import '../utils/shape_painter.dart';
 import '../utils/image_file_picker.dart';
+import '../utils/layout_breakpoints.dart';
 
 class ColoringPage extends StatefulWidget {
   final ColoringImage coloringImage;
@@ -125,7 +126,7 @@ class _ColoringPageState extends State<ColoringPage> {
             return AlertDialog(
               title: Text(tr('이미지 검색', 'Search images')),
               content: SizedBox(
-                width: 520,
+                width: AppLayout.imageSearchDialogWidth,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -142,7 +143,8 @@ class _ColoringPageState extends State<ColoringPage> {
                     ),
                     const SizedBox(height: 12),
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 360),
+                      constraints: const BoxConstraints(
+                          maxHeight: AppLayout.imageSearchDialogMaxHeight),
                       child: results.isEmpty
                           ? Center(
                               child: Text(
@@ -1106,7 +1108,7 @@ class _ColoringPageState extends State<ColoringPage> {
 
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = AppBreakpoints.editorIsDesktop(context);
 
     // Keep interaction mode independent of color selection.
     final MouseCursor cursor = _selectedTool == DrawingTool.pan
@@ -1126,7 +1128,7 @@ class _ColoringPageState extends State<ColoringPage> {
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                if (constraints.maxWidth >= 800) {
+                if (constraints.maxWidth >= AppBreakpoints.editorDesktopMinWidth) {
                   return Row(
                     children: [
                       _buildSidePanel(),

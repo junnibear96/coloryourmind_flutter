@@ -14,15 +14,25 @@ class ColoringImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    const radius = 18.0;
+
     return Card(
-      elevation: 4,
+      elevation: 1.0,
+      color: cs.surfaceContainerLow,
+      surfaceTintColor: cs.surfaceTint.withValues(alpha: 0.10),
+      shadowColor: cs.shadow.withValues(alpha: 0.10),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        overlayColor: WidgetStatePropertyAll(
+          cs.primary.withValues(alpha: 0.08),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -31,47 +41,72 @@ class ColoringImageCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: image.thumbnailColor,
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
+                    top: Radius.circular(radius),
                   ),
                 ),
                 child: image.backgroundImageBytes != null
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                        child: Image.memory(
-                          image.backgroundImageBytes!,
-                          fit: BoxFit.cover,
-                        ),
+                    ? Image.memory(
+                        image.backgroundImageBytes!,
+                        fit: BoxFit.cover,
                       )
-                    : CustomPaint(
-                        painter: ThumbnailPainter(shapes: image.shapes),
+                    : Stack(
+                        children: [
+                          // Soft tonal overlay to calm very saturated thumbnail colors.
+                          Positioned.fill(
+                            child: ColoredBox(
+                              color: cs.surface.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: CustomPaint(
+                              painter: ThumbnailPainter(
+                                shapes: image.shapes,
+                                fillColor: cs.surface.withValues(alpha: 0.90),
+                                strokeColor: cs.onSurface.withValues(alpha: 0.55),
+                                strokeWidth: 2.0,
+                              ),
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+                        ],
                       ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
               child: Row(
                 children: [
-                  Icon(
-                    image.icon,
-                    color: cs.primary,
-                    size: 24,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      image.icon,
+                      color: cs.onPrimaryContainer,
+                      size: 18,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       image.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.1,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Icon(
-                    Icons.arrow_forward_ios,
+                    Icons.chevron_right,
                     color: cs.onSurfaceVariant,
-                    size: 18,
+                    size: 22,
                   ),
                 ],
               ),

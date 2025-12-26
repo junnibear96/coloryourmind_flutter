@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/coloring_image.dart';
 import 'coloring_image_card.dart';
+import '../utils/layout_breakpoints.dart';
 
 class CategoryCarouselSection extends StatefulWidget {
   final String title;
@@ -56,10 +57,7 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
   }
 
   double _desiredViewportFraction(double width) {
-    if (width >= 1100) return 0.34; // show ~3 cards
-    if (width >= 820) return 0.46; // show ~2 cards
-    if (width >= 560) return 0.70; // show 1 + peek
-    return 0.86; // mobile
+    return AppBreakpoints.carouselViewportFractionForWidth(width);
   }
 
   void _maybeUpdateController(double width) {
@@ -85,9 +83,12 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 800;
+        // Use full screen width for breakpoints.
+        final screenWidth = AppBreakpoints.screenWidth(context);
 
-        if (isDesktop) {
+        if (AppBreakpoints.useGrid(context)) {
+          final columns = AppBreakpoints.gridColumnsForWidth(screenWidth);
+          final aspect = columns >= 3 ? 1.35 : 1.25;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -96,9 +97,9 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 300, // Makes items "pretty" size, effectively "small" enough
-                  childAspectRatio: 1.4,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  childAspectRatio: aspect,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                 ),

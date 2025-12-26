@@ -5,6 +5,7 @@ import '../widgets/category_carousel_section.dart';
 import '../data/sample_data.dart';
 import '../state/app_state.dart';
 import '../utils/localization_utils.dart';
+import '../utils/layout_breakpoints.dart';
 import 'coloring_page.dart';
 
 class IntroPage extends StatefulWidget {
@@ -69,7 +70,7 @@ class _IntroPageState extends State<IntroPage> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
+            constraints: const BoxConstraints(maxWidth: AppLayout.contentMaxWidth),
             child: Column(
               children: [
                 _buildHeader(),
@@ -80,37 +81,52 @@ class _IntroPageState extends State<IntroPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSearchBar(),
-                        ValueListenableBuilder<List<ColoringImage>>(
-                          valueListenable: uploadedImagesNotifier,
-                          builder: (context, uploaded, _) {
-                            if (uploaded.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
-                            return CategoryCarouselSection(
-                              title: tr('내 항목', 'My Items'),
-                              images: uploaded,
-                              onTapImage: _openUploadedImage,
-                            );
-                          },
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                          child: _buildSearchBar(),
                         ),
-                        if (all.isEmpty)
-                          Container(
-                            height: 200,
-                            alignment: Alignment.center,
-                            child: Text(
-                              tr('검색 결과가 없습니다.', 'No results found.'),
-                              style: TextStyle(color: Colors.grey.shade500),
-                            ),
-                          )
-                        else
-                          ...groups.entries.map((entry) {
-                            return CategoryCarouselSection(
-                              title: entry.key,
-                              images: entry.value,
-                              onTapImage: _openColoringPage,
-                            );
-                          }),
+                        const SizedBox(height: 10),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: ValueListenableBuilder<List<ColoringImage>>(
+                            valueListenable: uploadedImagesNotifier,
+                            builder: (context, uploaded, _) {
+                              if (uploaded.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return CategoryCarouselSection(
+                                title: tr('내 항목', 'My Items'),
+                                images: uploaded,
+                                onTapImage: _openUploadedImage,
+                              );
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: all.isEmpty
+                              ? SizedBox(
+                                  height: 220,
+                                  child: Center(
+                                    child: Text(
+                                      tr('검색 결과가 없습니다.', 'No results found.'),
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: groups.entries.map((entry) {
+                                    return CategoryCarouselSection(
+                                      title: entry.key,
+                                      images: entry.value,
+                                      onTapImage: _openColoringPage,
+                                    );
+                                  }).toList(growable: false),
+                                ),
+                        ),
                       ],
                     ),
                   ),
@@ -126,42 +142,51 @@ class _IntroPageState extends State<IntroPage> {
   Widget _buildHeader() {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: cs.primary,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.palette, color: cs.onPrimary, size: 28),
+    return Material(
+      color: cs.surface,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Color Your Mind',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                Text(
-                  'Relax and color.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.palette, color: cs.onPrimaryContainer, size: 24),
             ),
-          ),
-          _buildSettingsMenu(),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Color Your Mind',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    tr('편안하게 색칠해요.', 'Relax and color.'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildSettingsMenu(),
+          ],
+        ),
       ),
     );
   }
@@ -169,7 +194,7 @@ class _IntroPageState extends State<IntroPage> {
   Widget _buildSettingsMenu() {
     final cs = Theme.of(context).colorScheme;
     return PopupMenuButton<String>(
-      icon: Icon(Icons.settings, color: cs.onSurfaceVariant),
+      icon: Icon(Icons.settings_outlined, color: cs.onSurfaceVariant),
       tooltip: tr('설정', 'Settings'),
       onSelected: (val) {
         if (val == 'locale') {
@@ -198,30 +223,27 @@ class _IntroPageState extends State<IntroPage> {
 
   Widget _buildSearchBar() {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Container(
-        height: 46,
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: cs.shadow.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    return TextField(
+      onChanged: _onSearchChanged,
+      decoration: InputDecoration(
+        hintText: tr('그림 검색...', 'Search images...'),
+        prefixIcon: Icon(Icons.search, color: cs.onSurfaceVariant),
+        filled: true,
+        fillColor: cs.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
         ),
-        child: TextField(
-          onChanged: _onSearchChanged,
-          decoration: InputDecoration(
-            hintText: tr('그림 검색...', 'Search images...'),
-            prefixIcon: Icon(Icons.search, color: cs.onSurfaceVariant),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 13),
-          ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: cs.primary.withValues(alpha: 0.9), width: 1.5),
+        ),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
     );
   }
