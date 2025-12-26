@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/localization_utils.dart';
+
 class CustomColorDialogResult {
   final Color? selectedColor;
   final List<Color> userColors;
@@ -130,14 +132,14 @@ class _CustomColorDialogState extends State<CustomColorDialog> {
       contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       title: Row(
         children: [
-          const Expanded(child: Text('색 편집')),
+          Expanded(child: Text(tr('색 편집', 'Edit Color'))),
           IconButton(
             onPressed: () => Navigator.of(context).pop(
               CustomColorDialogResult(
                   selectedColor: null, userColors: widget.userColors),
             ),
             icon: const Icon(Icons.close),
-            tooltip: 'Close',
+            tooltip: tr('닫기', 'Close'),
           ),
         ],
       ),
@@ -202,19 +204,19 @@ class _CustomColorDialogState extends State<CustomColorDialog> {
                       const SizedBox(height: 10),
                       _RgbRow(
                         controller: _rController,
-                        label: '빨강',
+                        label: tr('빨강', 'Red'),
                         onChanged: (_) => _onRgbChanged(),
                       ),
                       const SizedBox(height: 8),
                       _RgbRow(
                         controller: _gController,
-                        label: '녹색',
+                        label: tr('녹색', 'Green'),
                         onChanged: (_) => _onRgbChanged(),
                       ),
                       const SizedBox(height: 8),
                       _RgbRow(
                         controller: _bController,
-                        label: '파랑',
+                        label: tr('파랑', 'Blue'),
                         onChanged: (_) => _onRgbChanged(),
                       ),
                       const SizedBox(height: 14),
@@ -252,7 +254,7 @@ class _CustomColorDialogState extends State<CustomColorDialog> {
               children: [
                 Expanded(
                   child: _ColorGridSection(
-                    title: '기본 색',
+                    title: tr('기본 색', 'Default Colors'),
                     colors: widget.defaultColors,
                     onPick: _setColor,
                   ),

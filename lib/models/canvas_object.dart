@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 enum CanvasObjectType {
   sticker,
   text,
+  shape,
 }
 
 class CanvasObject {

@@ -58,11 +58,14 @@ class _IntroPageState extends State<IntroPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     final all = _getFilteredImages();
     final groups = _groupImages(all);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: cs.surface,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -121,6 +124,8 @@ class _IntroPageState extends State<IntroPage> {
   }
 
   Widget _buildHeader() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Row(
@@ -128,11 +133,11 @@ class _IntroPageState extends State<IntroPage> {
           Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
-              color: Colors.purple,
+            decoration: BoxDecoration(
+              color: cs.primary,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.palette, color: Colors.white, size: 28),
+            child: Icon(Icons.palette, color: cs.onPrimary, size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -141,18 +146,15 @@ class _IntroPageState extends State<IntroPage> {
               children: [
                 Text(
                   'Color Your Mind',
-                  style: TextStyle(
-                    fontSize: 22,
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
-                    color: Colors.grey.shade900,
                   ),
                 ),
                 Text(
                   'Relax and color.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -165,8 +167,9 @@ class _IntroPageState extends State<IntroPage> {
   }
 
   Widget _buildSettingsMenu() {
+    final cs = Theme.of(context).colorScheme;
     return PopupMenuButton<String>(
-      icon: Icon(Icons.settings, color: Colors.grey.shade700),
+      icon: Icon(Icons.settings, color: cs.onSurfaceVariant),
       tooltip: tr('설정', 'Settings'),
       onSelected: (val) {
         if (val == 'locale') {
@@ -194,16 +197,17 @@ class _IntroPageState extends State<IntroPage> {
   }
 
   Widget _buildSearchBar() {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Container(
         height: 46,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: cs.shadow.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -213,7 +217,7 @@ class _IntroPageState extends State<IntroPage> {
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
             hintText: tr('그림 검색...', 'Search images...'),
-            prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+            prefixIcon: Icon(Icons.search, color: cs.onSurfaceVariant),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 13),
           ),

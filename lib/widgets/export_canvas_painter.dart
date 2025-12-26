@@ -11,6 +11,7 @@ class ExportCanvasPainter {
   final double baseCanvasSize;
   final ui.Image? backgroundImage;
   final List<ShapeData> shapes;
+  final List<Path>? baseShapeFillPaths;
   final Map<int, Color> shapeColors;
   final List<DrawnLine> lines;
   final List<CanvasObject> canvasObjects;
@@ -20,11 +21,23 @@ class ExportCanvasPainter {
     required this.baseCanvasSize,
     required this.backgroundImage,
     required this.shapes,
+    this.baseShapeFillPaths,
     required this.shapeColors,
     required this.lines,
     required this.canvasObjects,
     required this.fallbackStickerColor,
   });
+
+  bool _canPaintFromFillPath(ShapeType type) {
+    switch (type) {
+      case ShapeType.butterfly:
+      case ShapeType.sun:
+      case ShapeType.moon:
+        return false;
+      default:
+        return true;
+    }
+  }
 
   void paint(Canvas canvas, Size size) {
     // Export always uses baseCanvasSize coordinates.
@@ -65,7 +78,17 @@ class ExportCanvasPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3;
 
-      ShapePainter.drawShape(canvas, shape, fillPaint, strokePaint);
+      final paths = baseShapeFillPaths;
+      final canUsePath = paths != null &&
+          i < paths.length &&
+          _canPaintFromFillPath(shape.type);
+      if (canUsePath) {
+        final p = paths[i];
+        canvas.drawPath(p, fillPaint);
+        canvas.drawPath(p, strokePaint);
+      } else {
+        ShapePainter.drawShape(canvas, shape, fillPaint, strokePaint);
+      }
     }
 
     // Lines.
@@ -75,7 +98,29 @@ class ExportCanvasPainter {
 
     // Stickers + Text.
     for (final obj in canvasObjects) {
-      if (obj.type == CanvasObjectType.sticker) {
+      if (obj.type == CanvasObjectType.shape) {
+        final type = _extractShapeType(obj);
+        final color = _extractShapeColor(obj);
+        final rotation = _extractRotation(obj);
+        final shape =
+            ShapeData(type: type, position: obj.position, size: obj.size);
+        final fillPaint = Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
+        final strokePaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3;
+
+        canvas.save();
+        canvas.translate(obj.position.dx, obj.position.dy);
+        if (rotation != 0.0) {
+          canvas.rotate(rotation);
+        }
+        canvas.translate(-obj.position.dx, -obj.position.dy);
+        ShapePainter.drawShape(canvas, shape, fillPaint, strokePaint);
+        canvas.restore();
+      } else if (obj.type == CanvasObjectType.sticker) {
         final icon = _extractIcon(obj);
         final color = _extractStickerColor(obj);
         _drawIcon(canvas, icon, obj.position, obj.size, color);
@@ -85,9 +130,7 @@ class ExportCanvasPainter {
         final color = (obj.data is Map && obj.data['color'] is Color)
             ? (obj.data['color'] as Color)
             : Colors.black;
-        final rotation = (obj.data is Map && obj.data['rotation'] is num)
-            ? (obj.data['rotation'] as num).toDouble()
-            : 0.0;
+        final rotation = _extractRotation(obj);
         _drawText(canvas, text, obj.position, obj.size / 2, color,
             rotation: rotation);
       }
@@ -111,6 +154,30 @@ class ExportCanvasPainter {
       return data['color'] as Color;
     }
     return fallbackStickerColor;
+  }
+
+  ShapeType _extractShapeType(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['shapeType'] is ShapeType) {
+      return data['shapeType'] as ShapeType;
+    }
+    return ShapeType.heart;
+  }
+
+  Color _extractShapeColor(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['color'] is Color) {
+      return data['color'] as Color;
+    }
+    return Colors.black;
+  }
+
+  double _extractRotation(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['rotation'] is num) {
+      return (data['rotation'] as num).toDouble();
+    }
+    return 0.0;
   }
 
   void _drawIcon(
@@ -143,11 +210,9 @@ class ExportCanvasPainter {
     String text,
     Offset center,
     double fontSize,
-    Color color,
-    {
+    Color color, {
     double rotation = 0.0,
-  }
-  ) {
+  }) {
     final tp = TextPainter(
       text: TextSpan(
         text: text,

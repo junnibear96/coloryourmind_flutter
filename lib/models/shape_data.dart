@@ -7,6 +7,22 @@ enum ShapeType {
   butterfly,
   sun,
   moon,
+  circle,
+  square,
+  rectangle,
+  triangle,
+  diamond,
+  pentagon,
+  hexagon,
+  octagon,
+  arrowUp,
+  arrowDown,
+  arrowLeft,
+  arrowRight,
+  plus,
+  cross,
+  speechBubble,
+  cloud,
 }
 
 class ShapeData {

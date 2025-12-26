@@ -1,6 +1,7 @@
 enum DrawingTool {
   brush,
   eraser,
+  pan,
   colorPicker,
   shape,
   text,

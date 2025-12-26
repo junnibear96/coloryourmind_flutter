@@ -10,6 +10,7 @@ import '../utils/drawing_utils.dart';
 class ColoringCanvasPainter extends CustomPainter {
   final ui.Image? backgroundImage;
   final List<ShapeData> shapes;
+  final List<Path>? baseShapeFillPaths;
   final Map<int, Color> shapeColors;
   final List<DrawnLine> lines;
   final List<CanvasObject> canvasObjects;
@@ -20,6 +21,7 @@ class ColoringCanvasPainter extends CustomPainter {
   ColoringCanvasPainter({
     this.backgroundImage,
     required this.shapes,
+    this.baseShapeFillPaths,
     required this.shapeColors,
     required this.lines,
     required this.canvasObjects,
@@ -27,6 +29,18 @@ class ColoringCanvasPainter extends CustomPainter {
     this.currentLine,
     required this.baseCanvasSize,
   });
+
+  bool _canPaintFromFillPath(ShapeType type) {
+    switch (type) {
+      // Keep the custom drawing implementations to preserve details.
+      case ShapeType.butterfly:
+      case ShapeType.sun:
+      case ShapeType.moon:
+        return false;
+      default:
+        return true;
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -76,7 +90,17 @@ class ColoringCanvasPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3 / scale;
 
-      ShapePainter.drawShape(canvas, shape, fillPaint, strokePaint);
+      final paths = baseShapeFillPaths;
+      final canUsePath = paths != null &&
+          i < paths.length &&
+          _canPaintFromFillPath(shape.type);
+      if (canUsePath) {
+        final p = paths[i];
+        canvas.drawPath(p, fillPaint);
+        canvas.drawPath(p, strokePaint);
+      } else {
+        ShapePainter.drawShape(canvas, shape, fillPaint, strokePaint);
+      }
     }
 
     for (var line in lines) {
@@ -89,7 +113,38 @@ class ColoringCanvasPainter extends CustomPainter {
 
     // Text + stickers.
     for (final obj in canvasObjects) {
-      if (obj.type == CanvasObjectType.sticker) {
+      if (obj.type == CanvasObjectType.shape) {
+        final type = _extractShapeType(obj);
+        final color = _extractShapeColor(obj);
+        final rotation = _extractRotation(obj);
+        final shape =
+            ShapeData(type: type, position: obj.position, size: obj.size);
+        final fillPaint = Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
+        final strokePaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3 / scale;
+
+        canvas.save();
+        canvas.translate(obj.position.dx, obj.position.dy);
+        if (rotation != 0.0) {
+          canvas.rotate(rotation);
+        }
+        canvas.translate(-obj.position.dx, -obj.position.dy);
+        ShapePainter.drawShape(canvas, shape, fillPaint, strokePaint);
+
+        if (selectedObjectId != null && obj.id == selectedObjectId) {
+          final path = ShapePainter.buildFillPath(shape);
+          final outline = Paint()
+            ..style = PaintingStyle.stroke
+            ..color = Colors.blue.withValues(alpha: 0.75)
+            ..strokeWidth = 2 / scale;
+          canvas.drawPath(path, outline);
+        }
+        canvas.restore();
+      } else if (obj.type == CanvasObjectType.sticker) {
         final icon = _extractIcon(obj);
         final color = _extractStickerColor(obj);
         _drawIcon(canvas, icon, obj.position, obj.size, color);
@@ -99,9 +154,7 @@ class ColoringCanvasPainter extends CustomPainter {
         final color = (obj.data is Map && obj.data['color'] is Color)
             ? (obj.data['color'] as Color)
             : Colors.black;
-        final rotation = (obj.data is Map && obj.data['rotation'] is num)
-            ? (obj.data['rotation'] as num).toDouble()
-            : 0.0;
+        final rotation = _extractRotation(obj);
         _drawText(
           canvas,
           text,
@@ -136,6 +189,30 @@ class ColoringCanvasPainter extends CustomPainter {
     return Colors.black;
   }
 
+  ShapeType _extractShapeType(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['shapeType'] is ShapeType) {
+      return data['shapeType'] as ShapeType;
+    }
+    return ShapeType.heart;
+  }
+
+  Color _extractShapeColor(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['color'] is Color) {
+      return data['color'] as Color;
+    }
+    return Colors.black;
+  }
+
+  double _extractRotation(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['rotation'] is num) {
+      return (data['rotation'] as num).toDouble();
+    }
+    return 0.0;
+  }
+
   void _drawIcon(
     Canvas canvas,
     IconData icon,
@@ -166,14 +243,12 @@ class ColoringCanvasPainter extends CustomPainter {
     String text,
     Offset center,
     double fontSize,
-    Color color,
-    {
+    Color color, {
     double rotation = 0.0,
     bool isSelected = false,
     double outlineStrokeWidth = 2.0,
     double outlinePadding = 6.0,
-  }
-  ) {
+  }) {
     final tp = TextPainter(
       text: TextSpan(
         text: text,

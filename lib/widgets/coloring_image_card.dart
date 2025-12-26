@@ -14,6 +14,7 @@ class ColoringImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -54,7 +55,7 @@ class ColoringImageCard extends StatelessWidget {
                 children: [
                   Icon(
                     image.icon,
-                    color: Colors.purple.shade700,
+                    color: cs.primary,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -69,7 +70,7 @@ class ColoringImageCard extends StatelessWidget {
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
-                    color: Colors.grey.shade400,
+                    color: cs.onSurfaceVariant,
                     size: 18,
                   ),
                 ],

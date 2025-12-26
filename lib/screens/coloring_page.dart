@@ -9,14 +9,19 @@ import '../models/coloring_image.dart';
 import '../models/drawing_tool.dart';
 import '../models/drawn_line.dart';
 import '../models/canvas_object.dart';
+import '../models/shape_data.dart';
 import '../download/downloader.dart';
 import '../models/save_format.dart';
+import '../data/sample_data.dart';
 
 import '../widgets/coloring_canvas_painter.dart';
 import '../widgets/export_canvas_painter.dart';
 import '../widgets/custom_color_dialog.dart';
 import '../state/app_state.dart';
+import '../state/my_drawings_store.dart';
 import '../utils/localization_utils.dart';
+import '../utils/shape_painter.dart';
+import '../utils/image_file_picker.dart';
 
 class ColoringPage extends StatefulWidget {
   final ColoringImage coloringImage;
@@ -60,10 +65,13 @@ class _ColoringPageState extends State<ColoringPage> {
   Color _currentColor = Colors.black;
   double _brushSize = 5.0;
 
+  // Fill/Shape tools
+  late final List<Color?> _baseShapeFills;
+  late final List<Path> _baseShapeFillPaths;
+  ShapeType _selectedShapeType = ShapeType.heart;
+  double _shapeStampSize = 80.0;
+
   final double _baseCanvasSize = 512.0;
-  Offset _currentCursorPos = Offset.zero;
-
-
 
   // Colors
   final List<Color> _defaultColors = [
@@ -85,9 +93,198 @@ class _ColoringPageState extends State<ColoringPage> {
   ui.Image? _decodedBackgroundImage;
   bool _isLoadingImage = true;
 
+  bool _panHintShown = false;
+
+  Future<void> _openImageSearch() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        String query = '';
+
+        List<ColoringImage> buildResults() {
+          final q = query.trim().toLowerCase();
+          final samples = coloringImages;
+          final myItems = uploadedImagesNotifier.value;
+
+          bool matches(ColoringImage img) {
+            if (q.isEmpty) return true;
+            return img.title.toLowerCase().contains(q) ||
+                img.category.toLowerCase().contains(q);
+          }
+
+          final out = <ColoringImage>[];
+          out.addAll(myItems.where(matches));
+          out.addAll(samples.where(matches));
+          return out;
+        }
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final results = buildResults();
+
+            return AlertDialog(
+              title: Text(tr('이미지 검색', 'Search images')),
+              content: SizedBox(
+                width: 520,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      autofocus: true,
+                      onChanged: (v) =>
+                          setDialogState(() => query = v),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: tr('제목/카테고리로 검색', 'Search by title/category'),
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 360),
+                      child: results.isEmpty
+                          ? Center(
+                              child: Text(
+                                tr('검색 결과가 없습니다.', 'No results found.'),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: results.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final img = results[index];
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: img.thumbnailColor,
+                                    child: Icon(img.icon, color: Colors.black87),
+                                  ),
+                                  title: Text(img.title),
+                                  subtitle: Text(img.category),
+                                  onTap: () async {
+                                    Navigator.of(dialogContext).pop();
+
+                                    final shouldLoad = await showDialog<bool>(
+                                      context: this.context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: Text(tr('이미지 불러오기', 'Load image')),
+                                        content: Text(
+                                          tr(
+                                            '현재 작업은 초기화됩니다. 선택한 이미지를 불러올까요?',
+                                            'Your current work will be cleared. Load the selected image?',
+                                          ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, false),
+                                            child: Text(tr('취소', 'Cancel')),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, true),
+                                            child: Text(tr('불러오기', 'Load')),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (shouldLoad != true || !mounted) return;
+
+                                    Navigator.of(this.context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) => ColoringPage(coloringImage: img),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(tr('닫기', 'Close')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _titleFromFileName(String? name) {
+    if (name == null || name.trim().isEmpty) return tr('내 이미지', 'My Image');
+    final trimmed = name.trim();
+    final dot = trimmed.lastIndexOf('.');
+    if (dot <= 0) return trimmed;
+    return trimmed.substring(0, dot);
+  }
+
+  Future<void> _importImageFromDevice() async {
+    final navigator = Navigator.of(context);
+
+    final picked = await pickImageFileBytes();
+    if (picked == null) return;
+
+    if (!mounted) return;
+
+    final shouldLoad = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(tr('이미지 불러오기', 'Load image')),
+        content: Text(
+          tr(
+            '현재 작업은 초기화됩니다. 선택한 이미지를 불러올까요?',
+            'Your current work will be cleared. Load the selected image?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(tr('취소', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(tr('불러오기', 'Load')),
+          ),
+        ],
+      ),
+    );
+    if (shouldLoad != true) return;
+    if (!mounted) return;
+
+    final newItem = ColoringImage(
+      category: 'My Items',
+      title: _titleFromFileName(picked.name),
+      icon: Icons.image,
+      shapes: const [],
+      thumbnailColor: Colors.white,
+      backgroundImageBytes: picked.bytes,
+    );
+
+    final existing = uploadedImagesNotifier.value;
+    final updated = <ColoringImage>[newItem, ...existing];
+    uploadedImagesNotifier.value = updated.length > 30
+        ? updated.take(30).toList(growable: false)
+        : updated;
+
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => ColoringPage(coloringImage: newItem)),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _baseShapeFills =
+        List<Color?>.filled(widget.coloringImage.shapes.length, null);
+    _baseShapeFillPaths = widget.coloringImage.shapes
+        .map(ShapePainter.buildFillPath)
+        .toList(growable: false);
     _loadBackgroundImage();
   }
 
@@ -97,8 +294,8 @@ class _ColoringPageState extends State<ColoringPage> {
   }
 
   Future<void> _loadBackgroundImage() async {
-    final bytes =
-        widget.backgroundImageBytes ?? widget.coloringImage.backgroundImageBytes;
+    final bytes = widget.backgroundImageBytes ??
+        widget.coloringImage.backgroundImageBytes;
     if (bytes != null) {
       final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();
@@ -116,8 +313,6 @@ class _ColoringPageState extends State<ColoringPage> {
       }
     }
   }
-
-
 
   // --- Actions ---
 
@@ -157,6 +352,7 @@ class _ColoringPageState extends State<ColoringPage> {
                 _lines.clear();
                 _objects.clear();
                 _selectedObjectId = null;
+                _baseShapeFills.fillRange(0, _baseShapeFills.length, null);
                 _actions.clear();
                 _actionRedos.clear();
               });
@@ -179,7 +375,7 @@ class _ColoringPageState extends State<ColoringPage> {
         baseCanvasSize: _baseCanvasSize,
         backgroundImage: _decodedBackgroundImage,
         shapes: widget.coloringImage.shapes,
-        shapeColors: {}, // Simplification: shape filling not strictly tracked here, assumed handled if implemented
+        shapeColors: _combinedShapeColors,
         lines: _lines,
         canvasObjects: _objects,
         fallbackStickerColor: Colors.black,
@@ -188,8 +384,8 @@ class _ColoringPageState extends State<ColoringPage> {
       exportPainter.paint(canvas, size);
 
       final picture = recorder.endRecording();
-      final rendered =
-          await picture.toImage(_baseCanvasSize.toInt(), _baseCanvasSize.toInt());
+      final rendered = await picture.toImage(
+          _baseCanvasSize.toInt(), _baseCanvasSize.toInt());
 
       Uint8List? bytes;
       String mimeType;
@@ -236,10 +432,13 @@ class _ColoringPageState extends State<ColoringPage> {
         thumbnailColor: Colors.white,
         backgroundImageBytes: bytes,
       );
-      
-      final currentList = List<ColoringImage>.from(uploadedImagesNotifier.value);
+
+      final currentList =
+          List<ColoringImage>.from(uploadedImagesNotifier.value);
       currentList.insert(0, newImage);
       uploadedImagesNotifier.value = currentList;
+      // Ensure persistence across reloads (web) / no-op on non-web.
+      await saveMyDrawings(currentList);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -258,10 +457,242 @@ class _ColoringPageState extends State<ColoringPage> {
 
   // --- Input Handling ---
 
+  Map<int, Color> get _combinedShapeColors {
+    final out = <int, Color>{};
+    for (int i = 0; i < _baseShapeFills.length; i++) {
+      final c = _baseShapeFills[i];
+      if (c != null) out[i] = c;
+    }
+    return out;
+  }
+
+  int? _hitTestBaseShapeIndex(Offset canvasPos) {
+    for (int i = _baseShapeFillPaths.length - 1; i >= 0; i--) {
+      if (_baseShapeFillPaths[i].contains(canvasPos)) return i;
+    }
+    return null;
+  }
+
+  Color? _getBaseShapeFill(int shapeIndex) {
+    if (shapeIndex < 0 || shapeIndex >= _baseShapeFills.length) return null;
+    return _baseShapeFills[shapeIndex] ?? Colors.white;
+  }
+
+  void _setBaseShapeFill(int shapeIndex, Color? color) {
+    if (shapeIndex < 0 || shapeIndex >= _baseShapeFills.length) return;
+    _baseShapeFills[shapeIndex] = color;
+  }
+
+  CanvasObject? _selectedShapeObject() {
+    final id = _selectedObjectId;
+    if (id == null) return null;
+    final obj =
+        _objects.where((o) => o.id == id).cast<CanvasObject?>().firstOrNull;
+    if (obj == null) return null;
+    if (obj.type != CanvasObjectType.shape) return null;
+    return obj;
+  }
+
+  ShapeType _shapeObjectType(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['shapeType'] is ShapeType) {
+      return data['shapeType'] as ShapeType;
+    }
+    return ShapeType.heart;
+  }
+
+  Color _shapeObjectColor(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['color'] is Color) {
+      return data['color'] as Color;
+    }
+    return Colors.black;
+  }
+
+  void _setShapeObjectColor(CanvasObject obj, Color color) {
+    final data = obj.data;
+    if (data is Map) {
+      data['color'] = color;
+    }
+  }
+
+  double _shapeObjectRotation(CanvasObject obj) {
+    final data = obj.data;
+    if (data is Map && data['rotation'] is num) {
+      return (data['rotation'] as num).toDouble();
+    }
+    return 0.0;
+  }
+
+  void _setShapeObjectRotation(CanvasObject obj, double radians) {
+    final data = obj.data;
+    if (data is Map) {
+      data['rotation'] = radians;
+    }
+  }
+
+  CanvasObject? _hitTestShapeObject(Offset canvasPos) {
+    for (final obj in _objects.reversed) {
+      if (obj.type != CanvasObjectType.shape) continue;
+      final rot = _shapeObjectRotation(obj);
+      final delta = canvasPos - obj.position;
+      final cosR = math.cos(-rot);
+      final sinR = math.sin(-rot);
+      final local = Offset(
+            delta.dx * cosR - delta.dy * sinR,
+            delta.dx * sinR + delta.dy * cosR,
+          ) +
+          obj.position;
+      final shape = ShapeData(
+        type: _shapeObjectType(obj),
+        position: obj.position,
+        size: obj.size,
+      );
+      if (ShapePainter.buildFillPath(shape).contains(local)) return obj;
+    }
+    return null;
+  }
+
+  void _fillAt(Offset canvasPos) {
+    final idx = _hitTestBaseShapeIndex(canvasPos);
+    if (idx != null) {
+      final from = _getBaseShapeFill(idx);
+      final to = _currentColor;
+      if (from != null && from.toARGB32() == to.toARGB32()) return;
+      setState(() {
+        final action = _SetShapeFillAction(
+          setFill: _setBaseShapeFill,
+          shapeIndex: idx,
+          from: from,
+          to: to,
+        );
+        action.redo();
+        _actions.add(action);
+        _actionRedos.clear();
+      });
+      return;
+    }
+
+    final hit = _hitTestShapeObject(canvasPos);
+    if (hit == null) return;
+    final from = _shapeObjectColor(hit);
+    final to = _currentColor;
+    if (from.toARGB32() == to.toARGB32()) return;
+    setState(() {
+      final action = _SetObjectColorAction(
+        object: hit,
+        from: from,
+        to: to,
+        setColor: (c) => _setShapeObjectColor(hit, c),
+      );
+      action.redo();
+      _actions.add(action);
+      _actionRedos.clear();
+    });
+  }
+
+  Future<void> _pickColorAt(Offset canvasPos) async {
+    // Prefer picking from a hit-tested shape (fast).
+    final idx = _hitTestBaseShapeIndex(canvasPos);
+    if (idx != null) {
+      final c = _getBaseShapeFill(idx);
+      if (c != null) {
+        setState(() {
+          _currentColor = c;
+          if (_selectedTool == DrawingTool.eraser) {
+            _selectedTool = DrawingTool.brush;
+          }
+        });
+        return;
+      }
+    }
+
+    final hitShapeObj = _hitTestShapeObject(canvasPos);
+    if (hitShapeObj != null) {
+      final c = _shapeObjectColor(hitShapeObj);
+      setState(() {
+        _currentColor = c;
+        if (_selectedTool == DrawingTool.eraser) {
+          _selectedTool = DrawingTool.brush;
+        }
+      });
+      return;
+    }
+
+    // Fallback: render the current canvas to sample pixel color.
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final size = Size(_baseCanvasSize, _baseCanvasSize);
+
+      final exportPainter = ExportCanvasPainter(
+        baseCanvasSize: _baseCanvasSize,
+        backgroundImage: _decodedBackgroundImage,
+        shapes: widget.coloringImage.shapes,
+        baseShapeFillPaths: _baseShapeFillPaths,
+        shapeColors: _combinedShapeColors,
+        lines: _lines,
+        canvasObjects: _objects,
+        fallbackStickerColor: Colors.black,
+      );
+
+      exportPainter.paint(canvas, size);
+
+      final picture = recorder.endRecording();
+      final rendered = await picture.toImage(
+          _baseCanvasSize.toInt(), _baseCanvasSize.toInt());
+
+      final bd = await rendered.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (bd == null) return;
+
+      final x = canvasPos.dx.round().clamp(0, _baseCanvasSize.toInt() - 1);
+      final y = canvasPos.dy.round().clamp(0, _baseCanvasSize.toInt() - 1);
+      final byteOffset = (y * _baseCanvasSize.toInt() + x) * 4;
+
+      final r = bd.getUint8(byteOffset);
+      final g = bd.getUint8(byteOffset + 1);
+      final b = bd.getUint8(byteOffset + 2);
+      final a = bd.getUint8(byteOffset + 3);
+      final picked = Color.fromARGB(a, r, g, b);
+
+      if (!mounted) return;
+      setState(() {
+        _currentColor = picked;
+        if (_selectedTool == DrawingTool.eraser) {
+          _selectedTool = DrawingTool.brush;
+        }
+      });
+    } catch (e) {
+      debugPrint('Pick color error: $e');
+    }
+  }
+
+  void _addShapeAt(Offset canvasPos) {
+    final obj = CanvasObject(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      position: canvasPos,
+      size: _shapeStampSize,
+      type: CanvasObjectType.shape,
+      data: {
+        'shapeType': _selectedShapeType,
+        'color': _currentColor,
+        'rotation': 0.0,
+      },
+    );
+    setState(() {
+      final action = _AddObjectAction(objects: _objects, object: obj);
+      action.redo();
+      _actions.add(action);
+      _actionRedos.clear();
+      _selectedObjectId = obj.id;
+    });
+  }
+
   CanvasObject? _selectedTextObject() {
     final id = _selectedObjectId;
     if (id == null) return null;
-    final obj = _objects.where((o) => o.id == id).cast<CanvasObject?>().firstOrNull;
+    final obj =
+        _objects.where((o) => o.id == id).cast<CanvasObject?>().firstOrNull;
     if (obj == null) return null;
     if (obj.type != CanvasObjectType.text) return null;
     return obj;
@@ -285,7 +716,8 @@ class _ColoringPageState extends State<ColoringPage> {
   CanvasObject? _hitTestObject(Offset canvasPos) {
     for (final obj in _objects.reversed) {
       if (obj.type != CanvasObjectType.text) continue;
-      final text = (obj.data is Map) ? ((obj.data['text'] as String?) ?? '') : '';
+      final text =
+          (obj.data is Map) ? ((obj.data['text'] as String?) ?? '') : '';
       final color = (obj.data is Map && obj.data['color'] is Color)
           ? (obj.data['color'] as Color)
           : Colors.black;
@@ -381,25 +813,58 @@ class _ColoringPageState extends State<ColoringPage> {
   }
 
   void _onTapDown(TapDownDetails d) {
-    if (_selectedTool != DrawingTool.text) return;
     final canvasPos = _mapToCanvas(d.localPosition);
-    final hit = _hitTestObject(canvasPos);
-    if (hit != null) {
+
+    if (_selectedTool == DrawingTool.text) {
+      final hit = _hitTestObject(canvasPos);
+      if (hit != null) {
+        setState(() {
+          _selectedObjectId = hit.id;
+        });
+        return;
+      }
       setState(() {
-        _selectedObjectId = hit.id;
+        _selectedObjectId = null;
       });
+      unawaited(_addTextAt(canvasPos));
       return;
     }
-    setState(() {
-      _selectedObjectId = null;
-    });
-    unawaited(_addTextAt(canvasPos));
+
+    if (_selectedTool == DrawingTool.fill) {
+      _fillAt(canvasPos);
+      return;
+    }
+
+    if (_selectedTool == DrawingTool.colorPicker) {
+      unawaited(_pickColorAt(canvasPos));
+      return;
+    }
+
+    if (_selectedTool == DrawingTool.shape) {
+      final hit = _hitTestShapeObject(canvasPos);
+      if (hit != null) {
+        setState(() {
+          _selectedObjectId = hit.id;
+        });
+        return;
+      }
+      setState(() {
+        _selectedObjectId = null;
+      });
+      _addShapeAt(canvasPos);
+      return;
+    }
   }
 
   void _onScaleStart(ScaleStartDetails d) {
-    if (_selectedTool != DrawingTool.text) return;
+    if (_selectedTool != DrawingTool.text &&
+        _selectedTool != DrawingTool.shape) {
+      return;
+    }
     final canvasPos = _mapToCanvas(d.localFocalPoint);
-    final hit = _hitTestObject(canvasPos);
+    final hit = _selectedTool == DrawingTool.shape
+        ? _hitTestShapeObject(canvasPos)
+        : _hitTestObject(canvasPos);
     if (hit == null) return;
     setState(() {
       _selectedObjectId = hit.id;
@@ -407,7 +872,7 @@ class _ColoringPageState extends State<ColoringPage> {
       _transformStartFocalCanvasPos = canvasPos;
       _transformStartObjectPos = hit.position;
       _transformStartObjectSize = hit.size;
-      _transformStartRotation = _getTextRotation(hit);
+      _transformStartRotation = _getObjectRotation(hit);
     });
   }
 
@@ -417,7 +882,11 @@ class _ColoringPageState extends State<ColoringPage> {
     final startPos = _transformStartObjectPos;
     final startSize = _transformStartObjectSize;
     final startRot = _transformStartRotation;
-    if (obj == null || startFocal == null || startPos == null || startSize == null || startRot == null) {
+    if (obj == null ||
+        startFocal == null ||
+        startPos == null ||
+        startSize == null ||
+        startRot == null) {
       return;
     }
 
@@ -428,7 +897,7 @@ class _ColoringPageState extends State<ColoringPage> {
     setState(() {
       obj.position = startPos + delta;
       obj.size = nextSize;
-      _setTextRotation(obj, nextRot);
+      _setObjectRotation(obj, nextRot);
     });
   }
 
@@ -437,10 +906,13 @@ class _ColoringPageState extends State<ColoringPage> {
     final startPos = _transformStartObjectPos;
     final startSize = _transformStartObjectSize;
     final startRot = _transformStartRotation;
-    if (obj != null && startPos != null && startSize != null && startRot != null) {
+    if (obj != null &&
+        startPos != null &&
+        startSize != null &&
+        startRot != null) {
       final toPos = obj.position;
       final toSize = obj.size;
-      final toRot = _getTextRotation(obj);
+      final toRot = _getObjectRotation(obj);
       if (toPos != startPos || toSize != startSize || toRot != startRot) {
         setState(() {
           final action = _TransformObjectAction(
@@ -451,7 +923,7 @@ class _ColoringPageState extends State<ColoringPage> {
             toSize: toSize,
             fromRotation: startRot,
             toRotation: toRot,
-            setRotation: (r) => _setTextRotation(obj, r),
+            setRotation: (r) => _setObjectRotation(obj, r),
           );
           _actions.add(action);
           _actionRedos.clear();
@@ -469,21 +941,20 @@ class _ColoringPageState extends State<ColoringPage> {
 
   void _onPanStart(DragStartDetails d) {
     if (_selectedTool == DrawingTool.brush ||
-        _selectedTool == DrawingTool.eraser ||
-        _selectedTool == DrawingTool.fill) {
+        _selectedTool == DrawingTool.eraser) {
       final pos = _mapToCanvas(d.localPosition);
       setState(() {
-        if (_selectedTool == DrawingTool.fill) {
-           // Fill logic implementation would go here (omitted for brevity/complexity)
-           // main.dart didn't fully implement complex flood fill in the viewed snippets.
-        } else {
-          _currentLine = DrawnLine(
-            points: [pos],
-            color: _selectedTool == DrawingTool.eraser ? Colors.white : _currentColor,
-            width: _selectedTool == DrawingTool.eraser ? _brushSize * 2 : _brushSize,
-            brushStyle: _selectedTool == DrawingTool.eraser ? BrushStyle.basic : _brushStyle,
-          );
-        }
+        _currentLine = DrawnLine(
+          points: [pos],
+          color: _selectedTool == DrawingTool.eraser
+              ? Colors.white
+              : _currentColor,
+          width:
+              _selectedTool == DrawingTool.eraser ? _brushSize * 2 : _brushSize,
+          brushStyle: _selectedTool == DrawingTool.eraser
+              ? BrushStyle.basic
+              : _brushStyle,
+        );
       });
     }
   }
@@ -518,7 +989,18 @@ class _ColoringPageState extends State<ColoringPage> {
     return local * scale;
   }
 
+  double _getObjectRotation(CanvasObject obj) {
+    if (obj.type == CanvasObjectType.shape) return _shapeObjectRotation(obj);
+    return _getTextRotation(obj);
+  }
 
+  void _setObjectRotation(CanvasObject obj, double radians) {
+    if (obj.type == CanvasObjectType.shape) {
+      _setShapeObjectRotation(obj, radians);
+    } else {
+      _setTextRotation(obj, radians);
+    }
+  }
 
   void _openColorPicker() async {
     final result = await showDialog<CustomColorDialogResult>(
@@ -541,32 +1023,95 @@ class _ColoringPageState extends State<ColoringPage> {
     }
   }
 
+  void _selectTool(DrawingTool tool) {
+    if (_selectedTool == tool) return;
+
+    setState(() {
+      _selectedTool = tool;
+    });
+
+    if (tool == DrawingTool.pan && !_panHintShown) {
+      _panHintShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              tr('이동 모드: 드래그로 이동, 핀치로 확대/축소',
+                  'Pan mode: drag to move, pinch to zoom'),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      });
+    }
+  }
+
+  String _shapeTypeLabel(ShapeType t) {
+    switch (t) {
+      case ShapeType.heart:
+        return tr('하트', 'Heart');
+      case ShapeType.star:
+        return tr('별', 'Star');
+      case ShapeType.flower:
+        return tr('꽃', 'Flower');
+      case ShapeType.butterfly:
+        return tr('나비', 'Butterfly');
+      case ShapeType.sun:
+        return tr('태양', 'Sun');
+      case ShapeType.moon:
+        return tr('달', 'Moon');
+      case ShapeType.circle:
+        return tr('원', 'Circle');
+      case ShapeType.square:
+        return tr('정사각형', 'Square');
+      case ShapeType.rectangle:
+        return tr('직사각형', 'Rectangle');
+      case ShapeType.triangle:
+        return tr('삼각형', 'Triangle');
+      case ShapeType.diamond:
+        return tr('마름모', 'Diamond');
+      case ShapeType.pentagon:
+        return tr('오각형', 'Pentagon');
+      case ShapeType.hexagon:
+        return tr('육각형', 'Hexagon');
+      case ShapeType.octagon:
+        return tr('팔각형', 'Octagon');
+      case ShapeType.arrowUp:
+        return '↑';
+      case ShapeType.arrowDown:
+        return '↓';
+      case ShapeType.arrowLeft:
+        return '←';
+      case ShapeType.arrowRight:
+        return '→';
+      case ShapeType.plus:
+        return '+';
+      case ShapeType.cross:
+        return '×';
+      case ShapeType.speechBubble:
+        return tr('말풍선', 'Bubble');
+      case ShapeType.cloud:
+        return tr('구름', 'Cloud');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingImage) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Determine cursor based on current color (if grey, use hand pointer)
-    MouseCursor cursor = MouseCursor.defer;
-    if (_currentColor == Colors.grey) {
-      // Note: SystemMouseCursors.click is a standard hand cursor.
-      // But user wants the SPECIFIC image.
-      // We need to use SystemMouseCursors.none and draw a custom cursor or use a standard one that matches?
-      // Flutter Web supports custom cursors via CSS, but desktop/mobile is tricky with raw images as generic MouseCursor without engine support.
-      // However, usually 'click' is the hand cursor.
-      // Let's first try using the standard hand cursor as 'click' which is closest to the image.
-      // If the user strictly wants the PIXEL ART image they uploaded, we might need a custom widget stack or platform channel.
-      // Given the constraints and typical Flutter capabilities, usually we map to system cursors first.
-      // BUT I have the asset. Let's try to load it. 
-      // Actually, standard Flutter doesn't easily support "Image.asset" as a MouseCursor directly in a cross-platform way without plugins or web-specifics.
-      // A common workaround is hiding the mouse and showing a widget stack.
-      // Let's assume for now the User wants `SystemMouseCursors.click` (Hand) as a quick fix, OR try the widget approach.
-      // The prompt said "Change pointer to the second image". The second image is a pixel art hand.
-      // I'll implement a Widget-based custom cursor (hiding system cursor) for the canvas area when grey is selected.
-       cursor = SystemMouseCursors.none; 
-    }
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
 
+    // Keep interaction mode independent of color selection.
+    final MouseCursor cursor = _selectedTool == DrawingTool.pan
+        ? SystemMouseCursors.grab
+        : SystemMouseCursors.basic;
 
     return CallbackShortcuts(
       bindings: {
@@ -576,49 +1121,93 @@ class _ColoringPageState extends State<ColoringPage> {
       child: Focus(
         autofocus: true,
         child: Scaffold(
-          backgroundColor: Colors.grey.shade100,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 800;
+          backgroundColor: cs.surface,
+          appBar: isDesktop ? null : _buildMobileAppBar(),
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth >= 800) {
+                  return Row(
+                    children: [
+                      _buildSidePanel(),
+                      Expanded(
+                        child: _buildCanvasArea(cursor),
+                      ),
+                    ],
+                  );
+                }
 
-            if (isDesktop) {
-              return Row(
-                children: [
-                  _buildSidePanel(),
-                  Expanded(
-                    child: _buildCanvasArea(cursor),
-                  ),
-                ],
-              );
-            }
-
-            return Column(
-              children: [
-                _buildToolbar(),
-                Expanded(
-                  child: _buildCanvasArea(cursor),
-                ),
-                _buildBottomControls(),
-              ],
-            );
-          },
-        ),
-      ),
+                return Column(
+                  children: [
+                    Expanded(
+                      child: _buildCanvasArea(cursor),
+                    ),
+                    _buildBottomControls(),
+                  ],
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
 
+  PreferredSizeWidget _buildMobileAppBar() {
+    return AppBar(
+      title: Text(tr('컬러링', 'Coloring')),
+      leading: IconButton(
+        tooltip: tr('뒤로', 'Back'),
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          tooltip: tr('불러오기', 'Import'),
+          icon: const Icon(Icons.file_open),
+          onPressed: _importImageFromDevice,
+        ),
+        IconButton(
+          tooltip: tr('검색', 'Search'),
+          icon: const Icon(Icons.search),
+          onPressed: _openImageSearch,
+        ),
+        IconButton(
+          tooltip: tr('실행 취소', 'Undo'),
+          icon: const Icon(Icons.undo),
+          onPressed: _actions.isNotEmpty ? _undo : null,
+        ),
+        IconButton(
+          tooltip: tr('다시 실행', 'Redo'),
+          icon: const Icon(Icons.redo),
+          onPressed: _actionRedos.isNotEmpty ? _redo : null,
+        ),
+        IconButton(
+          tooltip: tr('초기화', 'Reset'),
+          icon: const Icon(Icons.delete_outline),
+          onPressed: _clearCanvas,
+        ),
+        PopupMenuButton<SaveFormat>(
+          tooltip: tr('저장', 'Save'),
+          onSelected: _saveImage,
+          itemBuilder: (context) => const [
+            PopupMenuItem(
+              value: SaveFormat.png,
+              child: Text('PNG'),
+            ),
+            PopupMenuItem(
+              value: SaveFormat.jpg,
+              child: Text('JPG'),
+            ),
+          ],
+          icon: const Icon(Icons.save_alt),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCanvasArea(MouseCursor cursor) {
     return MouseRegion(
-      onHover: (event) {
-        if (_currentColor == Colors.grey) {
-          setState(() {
-            _currentCursorPos = event.localPosition;
-          });
-        }
-      },
       cursor: cursor,
       child: Stack(
         children: [
@@ -633,37 +1222,57 @@ class _ColoringPageState extends State<ColoringPage> {
                   aspectRatio: 1.0,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      return GestureDetector(
-                        onTapDown: _onTapDown,
-                        onPanStart:
-                            _selectedTool == DrawingTool.text ? null : _onPanStart,
-                        onPanUpdate:
-                            _selectedTool == DrawingTool.text ? null : _onPanUpdate,
-                        onPanEnd:
-                            _selectedTool == DrawingTool.text ? null : _onPanEnd,
-                        onScaleStart:
-                            _selectedTool == DrawingTool.text ? _onScaleStart : null,
-                        onScaleUpdate:
-                            _selectedTool == DrawingTool.text ? _onScaleUpdate : null,
-                        onScaleEnd:
-                            _selectedTool == DrawingTool.text ? _onScaleEnd : null,
-                        child: Container(
-                          key: _canvasKey,
-                          color: Colors.white,
-                          child: CustomPaint(
-                            size: Size(_baseCanvasSize, _baseCanvasSize),
-                            painter: ColoringCanvasPainter(
-                              backgroundImage: _decodedBackgroundImage,
-                              shapes: widget.coloringImage.shapes,
-                              shapeColors: {},
-                              lines: _lines,
-                              canvasObjects: _objects,
-                              selectedObjectId: _selectedObjectId,
-                              currentLine: _currentLine,
-                              baseCanvasSize: _baseCanvasSize,
-                            ),
+                      final canvas = Container(
+                        key: _canvasKey,
+                        color: Colors.white,
+                        child: CustomPaint(
+                          size: Size(_baseCanvasSize, _baseCanvasSize),
+                          painter: ColoringCanvasPainter(
+                            backgroundImage: _decodedBackgroundImage,
+                            shapes: widget.coloringImage.shapes,
+                            baseShapeFillPaths: _baseShapeFillPaths,
+                            shapeColors: _combinedShapeColors,
+                            lines: _lines,
+                            canvasObjects: _objects,
+                            selectedObjectId: _selectedObjectId,
+                            currentLine: _currentLine,
+                            baseCanvasSize: _baseCanvasSize,
                           ),
                         ),
+                      );
+
+                      if (_selectedTool == DrawingTool.pan) {
+                        // Navigation-only: let InteractiveViewer handle gestures.
+                        return canvas;
+                      }
+
+                      return GestureDetector(
+                        onTapDown: _onTapDown,
+                        onPanStart: (_selectedTool == DrawingTool.brush ||
+                                _selectedTool == DrawingTool.eraser)
+                            ? _onPanStart
+                            : null,
+                        onPanUpdate: (_selectedTool == DrawingTool.brush ||
+                                _selectedTool == DrawingTool.eraser)
+                            ? _onPanUpdate
+                            : null,
+                        onPanEnd: (_selectedTool == DrawingTool.brush ||
+                                _selectedTool == DrawingTool.eraser)
+                            ? _onPanEnd
+                            : null,
+                        onScaleStart: (_selectedTool == DrawingTool.text ||
+                                _selectedTool == DrawingTool.shape)
+                            ? _onScaleStart
+                            : null,
+                        onScaleUpdate: (_selectedTool == DrawingTool.text ||
+                                _selectedTool == DrawingTool.shape)
+                            ? _onScaleUpdate
+                            : null,
+                        onScaleEnd: (_selectedTool == DrawingTool.text ||
+                                _selectedTool == DrawingTool.shape)
+                            ? _onScaleEnd
+                            : null,
+                        child: canvas,
                       );
                     },
                   ),
@@ -671,22 +1280,6 @@ class _ColoringPageState extends State<ColoringPage> {
               ),
             ),
           ),
-          if (_currentColor == Colors.grey)
-            IgnorePointer(
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: _currentCursorPos.dx,
-                    top: _currentCursorPos.dy,
-                    child: Image.asset(
-                      'assets/images/hand_pointer.png',
-                      width: 32,
-                      height: 32,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           _buildFloatingButtons(),
         ],
       ),
@@ -708,6 +1301,16 @@ class _ColoringPageState extends State<ColoringPage> {
               BackButton(onPressed: () => Navigator.pop(context)),
               Row(
                 children: [
+                  IconButton(
+                    tooltip: tr('불러오기', 'Import'),
+                    icon: const Icon(Icons.file_open),
+                    onPressed: _importImageFromDevice,
+                  ),
+                  IconButton(
+                    tooltip: tr('검색', 'Search'),
+                    icon: const Icon(Icons.search),
+                    onPressed: _openImageSearch,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.undo),
                     onPressed: _actions.isNotEmpty ? _undo : null,
@@ -736,6 +1339,11 @@ class _ColoringPageState extends State<ColoringPage> {
                       _buildToolButton(DrawingTool.brush, Icons.brush),
                       _buildToolButton(
                           DrawingTool.eraser, Icons.cleaning_services),
+                      _buildToolButton(DrawingTool.pan, Icons.pan_tool_alt),
+                      _buildToolButton(DrawingTool.colorPicker, Icons.colorize),
+                      _buildToolButton(
+                          DrawingTool.fill, Icons.format_color_fill),
+                      _buildToolButton(DrawingTool.shape, Icons.category),
                       _buildToolButton(DrawingTool.text, Icons.text_fields),
                     ],
                   ),
@@ -788,8 +1396,8 @@ class _ColoringPageState extends State<ColoringPage> {
                               onSubmitted: (value) {
                                 final val = double.tryParse(value);
                                 if (val != null) {
-                                  setState(() =>
-                                      _brushSize = val.clamp(1.0, 50.0));
+                                  setState(
+                                      () => _brushSize = val.clamp(1.0, 50.0));
                                 }
                               },
                               controller: TextEditingController(
@@ -821,14 +1429,62 @@ class _ColoringPageState extends State<ColoringPage> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            color: Colors.red),
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
                         tooltip: tr('텍스트 삭제', 'Delete Text'),
                         onPressed: _selectedTextObject() == null
                             ? null
                             : _deleteSelectedText,
                       ),
                     ),
+                  ],
+
+                  if (_selectedTool == DrawingTool.shape) ...[
+                    const SizedBox(height: 20),
+                    Text(tr('도형', 'Shape'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ShapeType.values.map((t) {
+                        return ChoiceChip(
+                          label: Text(_shapeTypeLabel(t)),
+                          selected: _selectedShapeType == t,
+                          onSelected: (selected) {
+                            if (!selected) return;
+                            setState(() => _selectedShapeType = t);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_selectedShapeObject() == null) ...[
+                      Text(tr('크기', 'Size'),
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Slider(
+                        value: _shapeStampSize,
+                        min: 30.0,
+                        max: 180.0,
+                        onChanged: (v) => setState(() => _shapeStampSize = v),
+                      ),
+                    ],
+                    if (_selectedShapeObject() != null) ...[
+                      const SizedBox(height: 16),
+                      _buildShapeSizeControl(isCompact: false),
+                      const SizedBox(height: 10),
+                      _buildShapeRotationControl(isCompact: false),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.red),
+                          tooltip: tr('도형 삭제', 'Delete Shape'),
+                          onPressed: _deleteSelectedShape,
+                        ),
+                      ),
+                    ],
                   ],
                 ],
               ),
@@ -838,56 +1494,40 @@ class _ColoringPageState extends State<ColoringPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-               IconButton(
+              IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 tooltip: tr('지우기', 'Clear'),
                 onPressed: _clearCanvas,
               ),
-              ElevatedButton.icon(
-                    onPressed: () => _saveImage(SaveFormat.png),
-                icon: const Icon(Icons.save_alt),
-                label: Text(tr('저장', 'Save')),
-              )
+              PopupMenuButton<SaveFormat>(
+                tooltip: tr('저장', 'Save'),
+                onSelected: _saveImage,
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: SaveFormat.png,
+                    child: Text('PNG'),
+                  ),
+                  PopupMenuItem(
+                    value: SaveFormat.jpg,
+                    child: Text('JPG'),
+                  ),
+                ],
+                child: AbsorbPointer(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.save_alt),
+                    label: Text(tr('저장', 'Save')),
+                  ),
+                ),
+              ),
             ],
-           ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildToolbar() {
-    return Container(
-      height: 60,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.undo),
-            onPressed: _actions.isNotEmpty ? _undo : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.redo),
-            onPressed: _actionRedos.isNotEmpty ? _redo : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _clearCanvas,
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.save_alt),
-            onPressed: () => _saveImage(SaveFormat.png),
-          ),
-        ],
-      ),
-    );
-  }
+  // Mobile uses Scaffold.appBar now.
 
   Widget _buildFloatingButtons() {
     // Example floating UI could go here, for now empty or simple overlay
@@ -903,8 +1543,9 @@ class _ColoringPageState extends State<ColoringPage> {
   }
 
   Widget _buildBottomControls() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: Colors.white,
+      color: cs.surface,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -914,10 +1555,21 @@ class _ColoringPageState extends State<ColoringPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _buildToolButton(DrawingTool.brush, Icons.brush),
-                _buildToolButton(DrawingTool.eraser, Icons.cleaning_services),
-                _buildToolButton(DrawingTool.text, Icons.text_fields),
-                 // More tools...
+                _buildToolButton(DrawingTool.brush, Icons.brush,
+                    showLabel: true, compact: true),
+                _buildToolButton(DrawingTool.eraser, Icons.cleaning_services,
+                    showLabel: true, compact: true),
+                _buildToolButton(DrawingTool.pan, Icons.pan_tool_alt,
+                    showLabel: true, compact: true),
+                _buildToolButton(DrawingTool.colorPicker, Icons.colorize,
+                    showLabel: true, compact: true),
+                _buildToolButton(DrawingTool.fill, Icons.format_color_fill,
+                    showLabel: true, compact: true),
+                _buildToolButton(DrawingTool.shape, Icons.category,
+                    showLabel: true, compact: true),
+                _buildToolButton(DrawingTool.text, Icons.text_fields,
+                    showLabel: true, compact: true),
+                // More tools...
                 const SizedBox(width: 16),
                 GestureDetector(
                   onTap: _openColorPicker,
@@ -927,9 +1579,25 @@ class _ColoringPageState extends State<ColoringPage> {
                     decoration: BoxDecoration(
                       color: _currentColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey),
+                      border: Border.all(color: cs.outlineVariant),
                     ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                PopupMenuButton<SaveFormat>(
+                  tooltip: tr('저장', 'Save'),
+                  onSelected: _saveImage,
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: SaveFormat.png,
+                      child: Text('PNG'),
+                    ),
+                    PopupMenuItem(
+                      value: SaveFormat.jpg,
+                      child: Text('JPG'),
+                    ),
+                  ],
+                  child: Icon(Icons.save_alt, color: cs.onSurfaceVariant),
                 ),
               ],
             ),
@@ -957,8 +1625,265 @@ class _ColoringPageState extends State<ColoringPage> {
               ),
             ),
           ],
+          if (_selectedTool == DrawingTool.shape) ...[
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ShapeType.values.map((t) {
+                      return ChoiceChip(
+                        label: Text(_shapeTypeLabel(t)),
+                        selected: _selectedShapeType == t,
+                        onSelected: (selected) {
+                          if (!selected) return;
+                          setState(() => _selectedShapeType = t);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  if (_selectedShapeObject() == null)
+                    Slider(
+                      value: _shapeStampSize,
+                      min: 30.0,
+                      max: 180.0,
+                      onChanged: (v) => setState(() => _shapeStampSize = v),
+                    ),
+                  if (_selectedShapeObject() != null) ...[
+                    const SizedBox(height: 8),
+                    _buildShapeSizeControl(isCompact: true),
+                    const SizedBox(height: 8),
+                    _buildShapeRotationControl(isCompact: true),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                        tooltip: tr('도형 삭제', 'Delete Shape'),
+                        onPressed: _deleteSelectedShape,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  void _deleteSelectedShape() {
+    final obj = _selectedShapeObject();
+    if (obj == null) return;
+    final index = _objects.indexOf(obj);
+    if (index < 0) return;
+    setState(() {
+      final action = _RemoveObjectAction(
+        objects: _objects,
+        index: index,
+        object: obj,
+      );
+      action.redo();
+      _actions.add(action);
+      _actionRedos.clear();
+      _selectedObjectId = null;
+    });
+  }
+
+  Widget _buildShapeSizeControl({required bool isCompact}) {
+    final obj = _selectedShapeObject();
+    final size = obj == null ? _shapeStampSize : obj.size;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(tr('크기', 'Size'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        Slider(
+          value: size.clamp(20.0, 300.0),
+          min: 20.0,
+          max: 300.0,
+          onChangeStart:
+              obj == null ? null : (v) => _sliderStartSize = obj.size,
+          onChanged: obj == null
+              ? null
+              : (v) {
+                  setState(() {
+                    obj.size = v.clamp(20.0, 300.0);
+                  });
+                },
+          onChangeEnd: obj == null
+              ? null
+              : (v) {
+                  final from = _sliderStartSize;
+                  if (from == null) return;
+                  final to = v.clamp(20.0, 300.0);
+                  if (from == to) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: from,
+                      toSize: to,
+                      fromRotation: _getObjectRotation(obj),
+                      toRotation: _getObjectRotation(obj),
+                      setRotation: (r) => _setObjectRotation(obj, r),
+                    );
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+        ),
+        Row(
+          children: [
+            Text(isCompact ? tr('크기', 'Size') : 'Size: '),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 72,
+              child: TextField(
+                enabled: obj != null,
+                keyboardType: TextInputType.number,
+                onSubmitted: (value) {
+                  final val = double.tryParse(value);
+                  if (val == null || obj == null) return;
+                  final clamped = val.clamp(20.0, 300.0);
+                  final fromSize = obj.size;
+                  final toSize = clamped;
+                  if (fromSize == toSize) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: fromSize,
+                      toSize: toSize,
+                      fromRotation: _getObjectRotation(obj),
+                      toRotation: _getObjectRotation(obj),
+                      setRotation: (r) => _setObjectRotation(obj, r),
+                    );
+                    action.redo();
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+                controller: TextEditingController(text: size.toInt().toString())
+                  ..selection = TextSelection.collapsed(
+                      offset: size.toInt().toString().length),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShapeRotationControl({required bool isCompact}) {
+    final obj = _selectedShapeObject();
+    final radians = obj == null ? 0.0 : _getObjectRotation(obj);
+    final degrees = radians * 180 / math.pi;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(tr('회전', 'Rotation'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        Slider(
+          value: degrees.clamp(-180.0, 180.0),
+          min: -180.0,
+          max: 180.0,
+          onChangeStart: obj == null
+              ? null
+              : (v) => _sliderStartRotation = _getObjectRotation(obj),
+          onChanged: obj == null
+              ? null
+              : (v) {
+                  setState(() {
+                    _setObjectRotation(obj, v * math.pi / 180.0);
+                  });
+                },
+          onChangeEnd: obj == null
+              ? null
+              : (v) {
+                  final from = _sliderStartRotation;
+                  if (from == null) return;
+                  final to = v * math.pi / 180.0;
+                  if (from == to) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: obj.size,
+                      toSize: obj.size,
+                      fromRotation: from,
+                      toRotation: to,
+                      setRotation: (r) => _setObjectRotation(obj, r),
+                    );
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+        ),
+        Row(
+          children: [
+            Text(isCompact ? tr('회전', 'Rot') : 'Deg: '),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 72,
+              child: TextField(
+                enabled: obj != null,
+                keyboardType: TextInputType.number,
+                onSubmitted: (value) {
+                  final val = double.tryParse(value);
+                  if (val == null || obj == null) return;
+                  final clamped = val.clamp(-180.0, 180.0);
+                  final fromRot = _getObjectRotation(obj);
+                  final toRot = clamped * math.pi / 180.0;
+                  if (fromRot == toRot) return;
+                  setState(() {
+                    final action = _TransformObjectAction(
+                      object: obj,
+                      fromPos: obj.position,
+                      toPos: obj.position,
+                      fromSize: obj.size,
+                      toSize: obj.size,
+                      fromRotation: fromRot,
+                      toRotation: toRot,
+                      setRotation: (r) => _setObjectRotation(obj, r),
+                    );
+                    action.redo();
+                    _actions.add(action);
+                    _actionRedos.clear();
+                  });
+                },
+                controller:
+                    TextEditingController(text: degrees.toInt().toString())
+                      ..selection = TextSelection.collapsed(
+                          offset: degrees.toInt().toString().length),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -975,9 +1900,8 @@ class _ColoringPageState extends State<ColoringPage> {
           value: fontSize.clamp(10.0, 150.0),
           min: 10.0,
           max: 150.0,
-          onChangeStart: obj == null
-              ? null
-              : (v) => _sliderStartSize = (obj.size / 2),
+          onChangeStart:
+              obj == null ? null : (v) => _sliderStartSize = (obj.size / 2),
           onChanged: obj == null
               ? null
               : (v) {
@@ -1040,9 +1964,10 @@ class _ColoringPageState extends State<ColoringPage> {
                     _actionRedos.clear();
                   });
                 },
-                controller: TextEditingController(text: fontSize.toInt().toString())
-                  ..selection = TextSelection.collapsed(
-                      offset: fontSize.toInt().toString().length),
+                controller:
+                    TextEditingController(text: fontSize.toInt().toString())
+                      ..selection = TextSelection.collapsed(
+                          offset: fontSize.toInt().toString().length),
                 decoration: const InputDecoration(
                   isDense: true,
                   contentPadding:
@@ -1136,9 +2061,10 @@ class _ColoringPageState extends State<ColoringPage> {
                     _actionRedos.clear();
                   });
                 },
-                controller: TextEditingController(text: degrees.toInt().toString())
-                  ..selection = TextSelection.collapsed(
-                      offset: degrees.toInt().toString().length),
+                controller:
+                    TextEditingController(text: degrees.toInt().toString())
+                      ..selection = TextSelection.collapsed(
+                          offset: degrees.toInt().toString().length),
                 decoration: const InputDecoration(
                   isDense: true,
                   contentPadding:
@@ -1153,12 +2079,70 @@ class _ColoringPageState extends State<ColoringPage> {
     );
   }
 
-  Widget _buildToolButton(DrawingTool tool, IconData icon) {
+  String _toolLabel(DrawingTool tool) {
+    switch (tool) {
+      case DrawingTool.brush:
+        return tr('브러시', 'Brush');
+      case DrawingTool.eraser:
+        return tr('지우개', 'Eraser');
+      case DrawingTool.pan:
+        return tr('이동', 'Pan');
+      case DrawingTool.colorPicker:
+        return tr('스포이드', 'Picker');
+      case DrawingTool.fill:
+        return tr('채우기', 'Fill');
+      case DrawingTool.shape:
+        return tr('도형', 'Shape');
+      case DrawingTool.text:
+        return tr('텍스트', 'Text');
+    }
+  }
+
+  Widget _buildToolButton(
+    DrawingTool tool,
+    IconData icon, {
+    bool showLabel = false,
+    bool compact = false,
+  }) {
     final isSelected = _selectedTool == tool;
-    return IconButton(
-      icon: Icon(icon),
-      color: isSelected ? Colors.blue : Colors.grey,
-      onPressed: () => setState(() => _selectedTool = tool),
+    final cs = Theme.of(context).colorScheme;
+    final label = _toolLabel(tool);
+    final color = isSelected ? cs.primary : cs.onSurfaceVariant;
+
+    if (!showLabel) {
+      return IconButton(
+        tooltip: label,
+        icon: Icon(icon),
+        color: color,
+        onPressed: () => _selectTool(tool),
+      );
+    }
+
+    final textStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+        );
+
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _selectTool(tool),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 12,
+            vertical: compact ? 6 : 8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(height: 2),
+              Text(label, style: textStyle),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1172,7 +2156,7 @@ class _ColoringPageState extends State<ColoringPage> {
           return ChoiceChip(
             label: Text(style.name.toUpperCase()),
             selected: _brushStyle == style,
-             onSelected: (selected) {
+            onSelected: (selected) {
               if (selected) setState(() => _brushStyle = style);
             },
           );
@@ -1282,8 +2266,46 @@ class _TransformObjectAction implements _CanvasAction {
   }
 }
 
+class _SetShapeFillAction implements _CanvasAction {
+  final void Function(int shapeIndex, Color? color) setFill;
+  final int shapeIndex;
+  final Color? from;
+  final Color? to;
+
+  _SetShapeFillAction({
+    required this.setFill,
+    required this.shapeIndex,
+    required this.from,
+    required this.to,
+  });
+
+  @override
+  void redo() => setFill(shapeIndex, to);
+
+  @override
+  void undo() => setFill(shapeIndex, from);
+}
+
+class _SetObjectColorAction implements _CanvasAction {
+  final CanvasObject object;
+  final Color from;
+  final Color to;
+  final void Function(Color color) setColor;
+
+  _SetObjectColorAction({
+    required this.object,
+    required this.from,
+    required this.to,
+    required this.setColor,
+  });
+
+  @override
+  void redo() => setColor(to);
+
+  @override
+  void undo() => setColor(from);
+}
+
 extension<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
-
-

@@ -183,6 +183,8 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
   }
 
   Widget _buildTitle() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
@@ -192,20 +194,17 @@ class _CategoryCarouselSectionState extends State<CategoryCarouselSection> {
               widget.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 18,
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
               ),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             '(${widget.images.length})',
-            style: TextStyle(
-              fontSize: 13,
+            style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: cs.onSurfaceVariant,
             ),
           ),
         ],
@@ -227,6 +226,7 @@ class _CarouselArrowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -237,13 +237,13 @@ class _CarouselArrowButton extends StatelessWidget {
           height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: enabled ? 0.95 : 0.65),
-            border: Border.all(color: Colors.grey.shade300),
+            color: cs.surface.withValues(alpha: enabled ? 0.95 : 0.65),
+            border: Border.all(color: cs.outlineVariant),
           ),
           child: Icon(
             icon,
             size: 28,
-            color: enabled ? Colors.grey.shade800 : Colors.grey.shade500,
+            color: enabled ? cs.onSurface : cs.onSurfaceVariant,
           ),
         ),
       ),
