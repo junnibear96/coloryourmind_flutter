@@ -76,3 +76,18 @@ coverage/
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+
+# Editor-specific
+.vscode/
+
+# Android-specific
+android/.gradle/
+android/local.properties
+android/.idea/
+android/app/src/main/assets/
+
+# Windows-specific
+windows/flutter/ephemeral/
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
